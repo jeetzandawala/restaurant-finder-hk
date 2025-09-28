@@ -37,7 +37,8 @@ export default async function handler(request, response) {
     browser = await playwright.chromium.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      // --- FIX: Explicitly set headless to a boolean `true` ---
+      headless: true, // This must be a boolean, not chromium.headless which is a string
       ignoreHTTPSErrors: true, // Helpful in serverless environments
     });
     
