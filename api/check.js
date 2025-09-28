@@ -1,14 +1,15 @@
 // api/check.js
 import playwright from 'playwright-core';
-// REMOVED: No longer need the chromium package
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Import our platform-specific checkers
+// Import all platform-specific checkers from your repository
 import { checkSevenRooms } from '../checkers/sevenrooms.js';
 import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
+import { checkChope } from '../checkers/chope.js';
+import { checkBistrochat } from '../checkers/bistrochat.js';
 
 const BATCH_SIZE = 3;
 
@@ -16,13 +17,14 @@ const platformCheckers = {
   sevenrooms: checkSevenRooms,
   tablecheck: checkTableCheck,
   resdiary: checkResDiary,
+  chope: checkChope,
+  bistrochat: checkBistrochat,
 };
 
 export default async function handler(request, response) {
   let browser = null;
   try {
     const __filename = fileURLToPath(import.meta.url);
-    // --- FIX: Corrected the variable name from `filename` to `__filename` ---
     const __dirname = path.dirname(__filename);
     const jsonPath = path.join(__dirname, '..', 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
@@ -33,7 +35,6 @@ export default async function handler(request, response) {
     }
     const query = { date, partySize, time };
 
-    // --- PIVOT: Launch the WebKit (Safari) engine instead of Chromium ---
     browser = await playwright.webkit.launch({
       headless: true,
     });
@@ -57,7 +58,7 @@ export default async function handler(request, response) {
             await page.close();
           }
         }
-        return { name: restaurant.name, status: 'error', reason: 'No checker found for this platform' };
+        return { name: restaurant.name, status: 'error', reason: `No checker found for platform: ${restaurant.platform}` };
       });
       
       const batchResults = await Promise.allSettled(promises);
