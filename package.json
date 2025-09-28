@@ -5,10 +5,13 @@
   "main": "api/check.js",
   "type": "module",
   "scripts": {
-    "build": "npm install && npx playwright install webkit"
+    "build": "npx playwright install webkit"
   },
   "dependencies": {
     "playwright-core": "^1.44.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.44.1"
   }
 }
 
