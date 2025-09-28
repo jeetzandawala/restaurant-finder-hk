@@ -22,7 +22,8 @@ export default async function handler(request, response) {
   let browser = null;
   try {
     const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(filename);
+    // --- FIX: Corrected the variable name from `filename` to `__filename` ---
+    const __dirname = path.dirname(__filename);
     const jsonPath = path.join(__dirname, '..', 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
