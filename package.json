@@ -6,6 +6,7 @@
   "type": "module",
   "dependencies": {
     "playwright-core": "^1.44.1",
-    "chrome-aws-lambda": "^10.1.0"
+    "@sparticuz/chromium": "^123.0.1"
   }
 }
+

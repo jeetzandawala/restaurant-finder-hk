@@ -1,48 +1,44 @@
 // api/check.js
 import playwright from 'playwright-core';
-import chrome from 'chrome-aws-lambda';
+// --- CHANGE 1: Import the new chromium package ---
+import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Import our platform-specific checkers
-// Note the path change: we are now in api/, so we go up and then into checkers/
 import { checkSevenRooms } from '../checkers/sevenrooms.js';
 import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
-// Add other checkers like 'chope' here when you create the file
 
-const BATCH_SIZE = 3; // Keep batch size small to avoid timeouts in serverless environment
+const BATCH_SIZE = 3;
 
-// Platform checker mapping
 const platformCheckers = {
   sevenrooms: checkSevenRooms,
   tablecheck: checkTableCheck,
   resdiary: checkResDiary,
 };
 
-// Main serverless function handler
 export default async function handler(request, response) {
+  let browser = null;
   try {
-    // --- FIX 1: Correctly locate and read restaurants.json ---
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    // The path is relative to this file (api/check.js), so we go up one level to the root
     const jsonPath = path.join(__dirname, '..', 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
-    // Extract query parameters from the request URL
     const { date, partySize, time } = request.query;
     if (!date || !partySize || !time) {
       return response.status(400).json({ error: 'Missing required query parameters: date, partySize, time' });
     }
     const query = { date, partySize, time };
 
-    // --- FIX 2: Launch browser correctly for the serverless environment ---
-    const browser = await playwright.chromium.launch({
-      args: chrome.args,
-      executablePath: await chrome.executablePath,
-      headless: chrome.headless,
+    // --- CHANGE 2: Launch the browser using the new package's settings ---
+    browser = await playwright.chromium.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true, // Helpful in serverless environments
     });
     
     const context = await browser.newContext({
@@ -58,7 +54,6 @@ export default async function handler(request, response) {
         if (checker) {
           const page = await context.newPage();
           try {
-            // Add a specific timeout for each page navigation
             page.setDefaultNavigationTimeout(45000); 
             return await checker(page, restaurant, query);
           } finally {
@@ -82,19 +77,20 @@ export default async function handler(request, response) {
         }
       });
     }
-
-    await browser.close();
-
-    // Add caching headers to speed up repeated identical searches
+    
     response.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate'); 
     return response.status(200).json(results);
 
   } catch (error) {
-    // If anything goes wrong, log it for debugging and send a clean error response
     console.error('Unhandled error in serverless function:', error);
     return response.status(500).json({ 
         error: 'An internal server error occurred.',
         details: error.message 
     });
+  } finally {
+    if (browser !== null) {
+      await browser.close();
+    }
   }
 }
+
