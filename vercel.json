@@ -1,8 +1,10 @@
 {
-    "functions": {
-      "api/check.js": {
-        "maxDuration": 60,
-        "memory": 2048
-      }
+  "outputDirectory": false,
+  "functions": {
+    "api/check.js": {
+      "maxDuration": 60,
+      "memory": 2048
     }
   }
+}
+
