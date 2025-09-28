@@ -1,0 +1,386 @@
+[
+  {
+    "name": "Amber",
+    "platform": "sevenrooms",
+    "slug": "ambermandarin",
+    "url": "https://www.sevenrooms.com/experiences/ambermandarin"
+  },
+  {
+    "name": "Andō",
+    "platform": "sevenrooms",
+    "slug": "andohk",
+    "url": "https://www.sevenrooms.com/experiences/andohk"
+  },
+  {
+    "name": "aqua",
+    "platform": "sevenrooms",
+    "slug": "aquahk",
+    "url": "https://www.sevenrooms.com/reservations/aquahk"
+  },
+  {
+    "name": "Artemis & Apollo",
+    "platform": "sevenrooms",
+    "slug": "artemisandapollo",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=artemisandapollo"
+  },
+  {
+    "name": "Associazione Chianti",
+    "platform": "sevenrooms",
+    "slug": "associazionechianti",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=associazionechianti"
+  },
+  {
+    "name": "BELON",
+    "platform": "sevenrooms",
+    "slug": "belon",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=belon"
+  },
+  {
+    "name": "Buenos Aires Polo Club",
+    "platform": "sevenrooms",
+    "slug": "buenosairespoloclub",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=buenosairespoloclub"
+  },
+  {
+    "name": "Carbone",
+    "platform": "sevenrooms",
+    "slug": "carbonehk",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=carbonehk"
+  },
+  {
+    "name": "Chachawan",
+    "platform": "sevenrooms",
+    "slug": "chachawan",
+    "url": "https://www.sevenrooms.com/experiences/chachawan"
+  },
+  {
+    "name": "chapter",
+    "platform": "sevenrooms",
+    "slug": "chapter",
+    "url": "https://www.sevenrooms.com/reservations/chapter"
+  },
+  {
+    "name": "Chôm Chôm",
+    "platform": "sevenrooms",
+    "slug": "chomchom",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=chomchom"
+  },
+  {
+    "name": "Duddell's",
+    "platform": "sevenrooms",
+    "slug": "duddellshk",
+    "url": "https://www.sevenrooms.com/experiences/duddellshk"
+  },
+  {
+    "name": "Estro",
+    "platform": "sevenrooms",
+    "slug": "estrohk",
+    "url": "https://www.sevenrooms.com/experiences/estrohk"
+  },
+  {
+    "name": "FALCONE",
+    "platform": "sevenrooms",
+    "slug": "falcone",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=falcone"
+  },
+  {
+    "name": "Fukuro",
+    "platform": "sevenrooms",
+    "slug": "izakayafukuro",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=izakayafukuro"
+  },
+  {
+    "name": "Gaia Ristorante",
+    "platform": "sevenrooms",
+    "slug": "gaiaristorante",
+    "url": "https://www.sevenrooms.com/reservations/GAIAGroup?venues=gaiaristorante"
+  },
+  {
+    "name": "Grand Majestic Sichuan",
+    "platform": "sevenrooms",
+    "slug": "grandmajesticsichuan",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=grandmajesticsichuan"
+  },
+  {
+    "name": "Hansik Goo",
+    "platform": "sevenrooms",
+    "slug": "hansikgoo",
+    "url": "https://www.sevenrooms.com/reservations/hansikgoo"
+  },
+  {
+    "name": "Ho Lee Fook",
+    "platform": "sevenrooms",
+    "slug": "holeefook",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=holeefook"
+  },
+  {
+    "name": "Hotal Colombo",
+    "platform": "sevenrooms",
+    "slug": "hotalcolombo",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=hotalcolombo"
+  },
+  {
+    "name": "KAIKA",
+    "platform": "sevenrooms",
+    "slug": "kaika",
+    "url": "https://www.sevenrooms.com/reservations/kaika"
+  },
+  {
+    "name": "La Vache!",
+    "platform": "sevenrooms",
+    "slug": "lavachesoho",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=lavachesoho"
+  },
+  {
+    "name": "Leela",
+    "platform": "sevenrooms",
+    "slug": "leela",
+    "url": "https://www.sevenrooms.com/experiences/leela"
+  },
+  {
+    "name": "Limewood",
+    "platform": "sevenrooms",
+    "slug": "limewoodhk",
+    "url": "https://www.sevenrooms.com/reservations/limewoodhk"
+  },
+  {
+    "name": "Louise",
+    "platform": "sevenrooms",
+    "slug": "louise",
+    "url": "https://www.sevenrooms.com/experiences/louise?venues=louise"
+  },
+  {
+    "name": "LPM Hong Kong",
+    "platform": "sevenrooms",
+    "slug": "lpmhongkong",
+    "url": "https://www.sevenrooms.com/reservations/lpmhongkong/"
+  },
+  {
+    "name": "Magistracy Dining Room",
+    "platform": "sevenrooms",
+    "slug": "magistracydiningroom",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=magistracydiningroom"
+  },
+  {
+    "name": "Medora HK",
+    "platform": "sevenrooms",
+    "slug": "medorahk",
+    "url": "https://www.sevenrooms.com/reservations/medorahk"
+  },
+  {
+    "name": "MONO",
+    "platform": "sevenrooms",
+    "slug": "monohk",
+    "url": "https://www.sevenrooms.com/experiences/monohk"
+  },
+  {
+    "name": "MORA",
+    "platform": "sevenrooms",
+    "slug": "mora",
+    "url": "https://www.sevenrooms.com/experiences/mora"
+  },
+  {
+    "name": "Mott 32",
+    "platform": "sevenrooms",
+    "slug": "mott32hk",
+    "url": "https://www.sevenrooms.com/reservations/mott32hk"
+  },
+  {
+    "name": "New Punjab Club",
+    "platform": "sevenrooms",
+    "slug": "newpunjabclub",
+    "url": "https://www.sevenrooms.com/reservations/blacksheep/bsrwebsite?venues=newpunjabclub"
+  },
+  {
+    "name": "NOI",
+    "platform": "sevenrooms",
+    "slug": "noi",
+    "url": "https://www.sevenrooms.com/reservations/noi"
+  },
+  {
+    "name": "ODYSSÉE",
+    "platform": "sevenrooms",
+    "slug": "odyssee",
+    "url": "https://www.sevenrooms.com/reservations/odyssee"
+  },
+  {
+    "name": "Tate Dining Room",
+    "platform": "sevenrooms",
+    "slug": "tatediningroom",
+    "url": "https://www.sevenrooms.com/experiences/tatediningroom"
+  },
+  {
+    "name": "The Aubrey",
+    "platform": "sevenrooms",
+    "slug": "theaubreymohkg",
+    "url": "https://www.sevenrooms.com/reservations/theaubreymohkg"
+  },
+  {
+    "name": "The Krug Room",
+    "platform": "sevenrooms",
+    "slug": "mohkgthekrugroom",
+    "url": "https://www.sevenrooms.com/experiences/mohkgthekrugroom"
+  },
+  {
+    "name": "Tin Lung Heen",
+    "platform": "sevenrooms",
+    "slug": "tinlungheenhkgkw",
+    "url": "https://www.sevenrooms.com/reservations/tinlungheenhkgkw"
+  },
+  {
+    "name": "22 Ships",
+    "platform": "sevenrooms",
+    "slug": "22ships",
+    "url": "https://www.sevenrooms.com/experiences/22ships"
+  },
+  {
+    "name": "Hutong",
+    "platform": "sevenrooms",
+    "slug": "hutonghongkong",
+    "url": "https://www.sevenrooms.com/reservations/hutonghongkong"
+  },
+  {
+    "name": "CUCINA",
+    "platform": "tablecheck",
+    "slug": "marcopolo-hk-cucina",
+    "url": "https://www.tablecheck.com/en/marcopolo-hk-cucina/reserve"
+  },
+  {
+    "name": "GINZA IWA HONG KONG",
+    "platform": "tablecheck",
+    "slug": "ginza-iwa-hong-kong",
+    "url": "https://www.tablecheck.com/en/shops/ginza-iwa-hong-kong/reserve"
+  },
+  {
+    "name": "Hugo's",
+    "platform": "tablecheck",
+    "slug": "hyatt-regency-hong-kong-tsim-sha-tsui-hugos",
+    "url": "https://www.tablecheck.com/lo/hyatt-regency-hong-kong-tsim-sha-tsui-hugos/reserve"
+  },
+  {
+    "name": "One Harbour Road",
+    "platform": "tablecheck",
+    "slug": "grand-hyatt-hongkong-one-harbour-road",
+    "url": "https://www.tablecheck.com/en/grand-hyatt-hongkong-one-harbour-road/reserve"
+  },
+  {
+    "name": "Popinjays",
+    "platform": "tablecheck",
+    "slug": "niccolo-the-murray-popinjays",
+    "url": "https://www.tablecheck.com/en/niccolo-the-murray-popinjays/reserve"
+  },
+  {
+    "name": "Sushi Shikon",
+    "platform": "tablecheck",
+    "slug": "sushi-shikon",
+    "url": "https://www.tablecheck.com/en/shops/sushi-shikon/reserve"
+  },
+  {
+    "name": "Three on Canton",
+    "platform": "tablecheck",
+    "slug": "marcopolo-gateway-three-on-canton",
+    "url": "https://www.tablecheck.com/en/marcopolo-gateway-three-on-canton/reserve"
+  },
+  {
+    "name": "Comptoir",
+    "platform": "bistrochat",
+    "slug": "comptoir",
+    "url": "https://book.bistrochat.com/comptoir"
+  },
+  {
+    "name": "House of Culture",
+    "platform": "bistrochat",
+    "slug": "houseofculture",
+    "url": "https://book.bistrochat.com/houseofculture"
+  },
+  {
+    "name": "Landau's",
+    "platform": "bistrochat",
+    "slug": "landaus",
+    "url": "https://book.bistrochat.com/landaus"
+  },
+  {
+    "name": "Tabiá",
+    "platform": "bistrochat",
+    "slug": "tabia",
+    "url": "https://book.bistrochat.com/tabia"
+  },
+  {
+    "name": "Taste All Pâté",
+    "platform": "bistrochat",
+    "slug": "taste-all-pate",
+    "url": "https://book.bistrochat.com/taste-all-pate"
+  },
+  {
+    "name": "VEA",
+    "platform": "resdiary",
+    "slug": "vea",
+    "url": "https://vea.hk/reserve"
+  },
+  {
+    "name": "WING Restaurant",
+    "platform": "resdiary",
+    "slug": "wingrestaurant",
+    "url": "https://wingrestaurant.hk/reserve"
+  },
+  {
+    "name": "Bread Street Kitchen & Bar",
+    "platform": "chope",
+    "slug": "bread-street-kitchen-bar",
+    "url": "https://www.chope.co/hong-kong-restaurants/bread-street-kitchen-bar"
+  },
+  {
+    "name": "Gaddi's",
+    "platform": "chope",
+    "slug": "gaddis",
+    "url": "https://www.chope.co/hong-kong-restaurants/gaddis"
+  },
+  {
+    "name": "Lei Garden",
+    "platform": "chope",
+    "slug": "lei-garden",
+    "url": "https://www.chope.co/hong-kong-restaurants/lei-garden"
+  },
+  {
+    "name": "Ming Court",
+    "platform": "chope",
+    "slug": "ming-court",
+    "url": "https://www.chope.co/hong-kong-restaurants/ming-court"
+  },
+  {
+    "name": "YUM CHA",
+    "platform": "chope",
+    "slug": "yum-cha",
+    "url": "https://www.chope.co/hong-kong-restaurants/yum-cha"
+  },
+  {
+    "name": "Bâtard",
+    "platform": "chope",
+    "slug": "batard",
+    "url": "https://book.chope.co/booking?rid=batard"
+  },
+  {
+    "name": "Roganic",
+    "platform": "chope",
+    "slug": "roganic",
+    "url": "https://book.chope.co/booking?rid=roganic"
+  },
+  {
+    "name": "The Chairman",
+    "platform": "sevenrooms",
+    "slug": "thechairman",
+    "url": "https://www.sevenrooms.com/reservations/thechairman"
+  },
+  {
+    "name": "Zuma",
+    "platform": "sevenrooms",
+    "slug": "zumahk",
+    "url": "https://www.sevenrooms.com/reservations/zumahk"
+  },
+  {
+    "name": "Yardbird",
+    "platform": "sevenrooms",
+    "slug": "yardbird",
+    "url": "https://www.sevenrooms.com/reservations/yardbird"
+  }
+]
