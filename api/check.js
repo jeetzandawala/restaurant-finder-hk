@@ -1,7 +1,6 @@
 // api/check.js
 import playwright from 'playwright-core';
-// --- CHANGE 1: Import the new chromium package ---
-import chromium from '@sparticuz/chromium';
+// REMOVED: No longer need the chromium package
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -23,7 +22,7 @@ export default async function handler(request, response) {
   let browser = null;
   try {
     const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
+    const __dirname = path.dirname(filename);
     const jsonPath = path.join(__dirname, '..', 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
@@ -33,17 +32,13 @@ export default async function handler(request, response) {
     }
     const query = { date, partySize, time };
 
-    // --- CHANGE 2: Launch the browser using the new package's settings ---
-    browser = await playwright.chromium.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      // --- FIX: Explicitly set headless to a boolean `true` ---
-      headless: true, // This must be a boolean, not chromium.headless which is a string
-      ignoreHTTPSErrors: true, // Helpful in serverless environments
+    // --- PIVOT: Launch the WebKit (Safari) engine instead of Chromium ---
+    browser = await playwright.webkit.launch({
+      headless: true,
     });
     
     const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
     });
 
     const results = { available: [], unavailable: [] };
