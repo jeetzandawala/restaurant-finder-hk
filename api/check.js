@@ -1,7 +1,7 @@
 // api/check.js
 import { Redis } from '@upstash/redis';
 import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium-min';
+import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
 
@@ -57,7 +57,7 @@ export default async function handler(request, response) {
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
         executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
+        headless: 'new',
         ignoreHTTPSErrors: true,
     });
 
