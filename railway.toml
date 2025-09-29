@@ -10,4 +10,3 @@ startCommand = "node server.js"
 
 [env]
 NODE_ENV = "production"
-PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "false"
