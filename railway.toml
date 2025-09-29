@@ -1,4 +1,4 @@
-# railway.toml - Railway deployment
+# railway.toml - ENTERPRISE LEVEL: 8GB RAM + 8 vCPUs
 [build]
 builder = "nixpacks"
 
@@ -10,3 +10,5 @@ startCommand = "node server.js"
 
 [env]
 NODE_ENV = "production"
+NODE_OPTIONS = "--max-old-space-size=6000 --max-semi-space-size=1024"
+UV_THREADPOOL_SIZE = "16"

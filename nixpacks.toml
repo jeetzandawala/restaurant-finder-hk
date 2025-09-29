@@ -1,4 +1,4 @@
-# nixpacks.toml - Override cached Railway settings
+# nixpacks.toml - ENTERPRISE: 8GB RAM + 8 vCPUs BEAST MODE
 [phases.setup]
 nixPkgs = ["nodejs-18_x"]
 
@@ -6,7 +6,11 @@ nixPkgs = ["nodejs-18_x"]
 cmds = ["npm install"]
 
 [phases.build]
-cmds = ["npx playwright install-deps chromium || true", "npx playwright install chromium"]
+cmds = [
+  "npx playwright install-deps chromium || true", 
+  "npx playwright install chromium",
+  "echo 'ENTERPRISE MODE: 8GB RAM + 8 vCPUs - MAXIMUM PERFORMANCE!'"
+]
 
 [start]
-cmd = "node server.js"
+cmd = "NODE_OPTIONS='--max-old-space-size=6000 --max-semi-space-size=1024' UV_THREADPOOL_SIZE=16 node server.js"

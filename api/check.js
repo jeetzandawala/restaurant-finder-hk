@@ -11,9 +11,9 @@ import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
 import { checkBistrochat } from '../checkers/bistrochat.js';
 
-const BATCH_SIZE = 6; // Reduced for Railway memory constraints
-const CACHE_EXPIRATION_SECONDS = 600; // 10 minutes (increased from 5)
-const MAX_CONCURRENT_PAGES = 3; // Reduced concurrent pages for Railway
+const BATCH_SIZE = 50; // MASSIVE batches with 8GB RAM!
+const CACHE_EXPIRATION_SECONDS = 1800; // 30 minutes with high performance
+const MAX_CONCURRENT_PAGES = 20; // Max out with 8 vCPUs + 8GB RAM
 
 const platformCheckers = {
   sevenrooms: checkSevenRooms,
@@ -38,20 +38,14 @@ class SimpleBrowserPool {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--disable-accelerated-2d-canvas',
         '--no-first-run',
-        '--no-zygote',
-        '--single-process', // Critical for Railway - prevents crashes
         '--disable-background-networking',
         '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
         '--disable-features=TranslateUI',
-        '--disable-ipc-flooding-protection',
         '--disable-extensions',
-        '--disable-plugins',
         '--memory-pressure-off',
-        '--max_old_space_size=256' // Limit memory usage
+        '--max_old_space_size=2000', // MASSIVE memory with 8GB RAM!
+        '--js-flags="--max-old-space-size=2000"'
       ]
     });
   }
@@ -139,11 +133,11 @@ async function processRestaurantBatch(browserPool, restaurants, query) {
     try {
       page = await browserPool.getPage();
       
-      // Add timeout and retry logic for Railway
+      // Aggressive timeout with 8 vCPUs - much faster processing
       const result = await Promise.race([
         checker(page, restaurant, query),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout after 30 seconds')), 30000)
+          setTimeout(() => reject(new Error('Timeout after 60 seconds')), 60000)
         )
       ]);
       
