@@ -23,10 +23,17 @@ const platformCheckers = {
 
 export default async function handler(request, response) {
   let browser = null;
-  const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  });
+  
+  // Initialize Redis only if credentials are available
+  let redis = null;
+  const useCache = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
+  
+  if (useCache) {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
 
   try {
     const { date, partySize, time } = request.query;
@@ -36,16 +43,26 @@ export default async function handler(request, response) {
     const query = { date, partySize, time };
 
     const cacheKey = `reservations:${date}:${partySize}:${time}`;
-    const cachedResults = await redis.get(cacheKey);
-
-    if (cachedResults) {
-      console.log('CACHE HIT:', cacheKey);
-      response.setHeader('X-Cache-Status', 'HIT');
-      return response.status(200).json(cachedResults);
+    
+    // Check cache only if Redis is available
+    if (redis) {
+      try {
+        const cachedResults = await redis.get(cacheKey);
+        if (cachedResults) {
+          console.log('CACHE HIT:', cacheKey);
+          response.setHeader('X-Cache-Status', 'HIT');
+          return response.status(200).json(cachedResults);
+        }
+        console.log('CACHE MISS:', cacheKey);
+        response.setHeader('X-Cache-Status', 'MISS');
+      } catch (redisError) {
+        console.warn('Redis error, proceeding without cache:', redisError.message);
+        response.setHeader('X-Cache-Status', 'ERROR');
+      }
+    } else {
+      console.log('CACHE DISABLED: Redis credentials not configured');
+      response.setHeader('X-Cache-Status', 'DISABLED');
     }
-
-    console.log('CACHE MISS:', cacheKey);
-    response.setHeader('X-Cache-Status', 'MISS');
 
     const jsonPath = path.join(process.cwd(), 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
@@ -101,9 +118,13 @@ export default async function handler(request, response) {
       });
     }
 
-    if (results.available.length > 0 || results.unavailable.length > 0) {
-        await redis.set(cacheKey, JSON.stringify(results), { ex: CACHE_EXPIRATION_SECONDS });
-        console.log('CACHE SET:', cacheKey);
+    if (redis && (results.available.length > 0 || results.unavailable.length > 0)) {
+        try {
+          await redis.set(cacheKey, JSON.stringify(results), { ex: CACHE_EXPIRATION_SECONDS });
+          console.log('CACHE SET:', cacheKey);
+        } catch (redisError) {
+          console.warn('Redis cache write error:', redisError.message);
+        }
     }
 
     return response.status(200).json(results);

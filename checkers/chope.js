@@ -1,4 +1,6 @@
 // checkers/chope.js
+import { getPageText, getElementText, safeGoto, safeQuery } from './utils.js';
+
 export async function checkChope(page, restaurant, query) {
   const [year, month, day] = query.date.split('-');
   
@@ -18,13 +20,16 @@ export async function checkChope(page, restaurant, query) {
     url = `https://book.chope.co/booking?rid=${restaurant.slug}&source=rest_website&date=${day}%2F${month}%2F${year}&time=${query.time.replace(':', '')}&adults=${query.partySize}`;
   }
   try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    const navigationSuccess = await safeGoto(page, url);
+    if (!navigationSuccess) {
+      return { name: restaurant.name, status: 'unavailable', url };
+    }
     
     // Wait for dynamic content to load
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     
     // Get page content
-    const content = await page.textContent('body');
+    const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
     // Check for various unavailability messages
@@ -45,11 +50,11 @@ export async function checkChope(page, restaurant, query) {
     }
     
     // Look for booking-related elements that indicate availability
-    const bookingElements = await page.$$('button[type="submit"], .book-now, .reserve-now, .available-slot, input[type="submit"]');
+    const bookingElements = await safeQuery(page, 'button[type="submit"], .book-now, .reserve-now, .available-slot, input[type="submit"]');
     if (bookingElements.length > 0) {
       // Check if any of these elements contain booking-related text
       for (const element of bookingElements) {
-        const elementText = await element.textContent();
+        const elementText = await getElementText(element);
         if (elementText && (
           elementText.toLowerCase().includes('book') || 
           elementText.toLowerCase().includes('reserve') ||
@@ -73,8 +78,8 @@ export async function checkChope(page, restaurant, query) {
     // Check if our specific requested time appears in the page content or elements
     for (const timeVariant of timeVariants) {
       if (contentLower.includes(timeVariant.toLowerCase())) {
-        // Found the time in content, now check if it's in a selectable/bookable context
-        const timeElements = await page.$$(`option:has-text("${timeVariant}"), button:has-text("${timeVariant}"), .time-slot:has-text("${timeVariant}")`);
+        // Found the time in content, check for selectable elements
+        const timeElements = await safeQuery(page, `button, option, .time-slot`);
         if (timeElements.length > 0) {
           return { name: restaurant.name, status: 'available', url };
         }
@@ -82,16 +87,16 @@ export async function checkChope(page, restaurant, query) {
     }
     
     // Also check all clickable elements for the specific time
-    const allClickableElements = await page.$$('button, a, option, .clickable, [role="button"]');
+    const allClickableElements = await safeQuery(page, 'button, a, option, .clickable, [role="button"]');
     for (const element of allClickableElements) {
-      const elementText = await element.textContent();
+      const elementText = await getElementText(element);
       if (elementText && timeVariants.some(variant => elementText.includes(variant))) {
         return { name: restaurant.name, status: 'available', url };
       }
     }
     
     // Check for restaurant selection or calendar elements (indicates working booking system)
-    const functionalElements = await page.$$('select, .calendar, .date-picker, form');
+    const functionalElements = await safeQuery(page, 'select, .calendar, .date-picker, form');
     if (functionalElements.length > 2) { // More than just basic page elements
       return { name: restaurant.name, status: 'available', url };
     }
