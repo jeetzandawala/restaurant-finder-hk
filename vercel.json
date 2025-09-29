@@ -7,8 +7,7 @@
   },
   "build": {
     "env": {
-      "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
-      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1"
+      "PUPPETEER_CACHE_DIR": ".cache/puppeteer"
     }
   }
 }

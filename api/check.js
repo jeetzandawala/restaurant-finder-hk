@@ -51,14 +51,24 @@ export default async function handler(request, response) {
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
     // --- Launch Serverless-Compatible Browser ---
-    const { default: chromium } = await import('@sparticuz/chromium');
-    const { default: puppeteer } = await import('puppeteer-core');
+    const { default: puppeteer } = await import('puppeteer');
     
     browser = await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu',
+            '--disable-extensions',
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-renderer-backgrounding'
+        ],
+        headless: 'new',
         ignoreHTTPSErrors: true,
     });
 

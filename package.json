@@ -11,9 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sparticuz/chromium": "^123.0.1",
-    "@upstash/redis": "^1.28.0",
-    "puppeteer-core": "^22.15.0"
+    "puppeteer": "^21.11.0",
+    "@upstash/redis": "^1.28.0"
   },
   "engines": {
     "node": "22"
