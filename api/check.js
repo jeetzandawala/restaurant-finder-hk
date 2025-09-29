@@ -7,7 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Import all the checker functions
-import { check as checkChope } from '../checkers/chope.js';
+import { checkChope } from '../checkers/chope.js'; // CORRECTED IMPORT
 import { checkSevenRooms } from '../checkers/sevenrooms.js';
 import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
@@ -26,7 +26,7 @@ const platformCheckers = {
   sevenrooms: checkSevenRooms,
   tablecheck: checkTableCheck,
   resdiary: checkResDiary,
-  chope: checkChope,
+  chope: checkChope, // This was already correct
   bistrochat: checkBistrochat,
 };
 
@@ -62,7 +62,7 @@ export default async function handler(request, response) {
         args: chromium.args,
         executablePath: await chromium.executablePath(),
         headless: chromium.headless,
-        ignoreHTTPSErrors: true,
+        ignoreHTTPSError: true,
     });
 
     const context = await browser.newContext({
@@ -123,4 +123,3 @@ export default async function handler(request, response) {
     }
   }
 }
-
