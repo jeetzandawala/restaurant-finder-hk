@@ -5,6 +5,13 @@ import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
 
+// Standard, simple imports for all checker functions
+import { checkChope } from '../checkers/chope.js';
+import { checkSevenRooms } from '../checkers/sevenrooms.js';
+import { checkTableCheck } from '../checkers/tablecheck.js';
+import { checkResDiary } from '../checkers/resdiary.js';
+import { checkBistrochat } from '../checkers/bistrochat.js';
+
 // --- Caching Setup ---
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -15,11 +22,11 @@ const BATCH_SIZE = 5;
 const CACHE_EXPIRATION_SECONDS = 300; // 5 minutes
 
 const platformCheckers = {
-  sevenrooms: (await import('../checkers/sevenrooms.js')).checkSevenRooms,
-  tablecheck: (await import('../checkers/tablecheck.js')).checkTableCheck,
-  resdiary: (await import('../checkers/resdiary.js')).checkResDiary,
-  chope: (await import('../checkers/chope.js')).checkChope,
-  bistrochat: (await import('../checkers/bistrochat.js')).checkBistrochat,
+  sevenrooms: checkSevenRooms,
+  tablecheck: checkTableCheck,
+  resdiary: checkResDiary,
+  chope: checkChope,
+  bistrochat: checkBistrochat,
 };
 
 export default async function handler(request, response) {
@@ -50,8 +57,8 @@ export default async function handler(request, response) {
     // --- Launch Serverless-Compatible Browser ---
     browser = await playwright.chromium.launch({
         args: chromium.args,
-        executablePath: await chromium.executablePath(), // Correct for latest version
-        headless: chromium.headless, // Correct for latest version
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
         ignoreHTTPSErrors: true,
     });
 
@@ -68,7 +75,7 @@ export default async function handler(request, response) {
         const checker = platformCheckers[restaurant.platform];
         if (checker) {
           const page = await context.newPage();
-          page.setDefaultNavigationTimeout(60000); // Increased timeout
+          page.setDefaultNavigationTimeout(60000); 
           try {
             return await checker(page, restaurant, query);
           } finally {
