@@ -5,16 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "node -e \"console.log('Chromium setup complete')\"",
-    "vercel-build": "echo 'Using @sparticuz/chromium - no additional packages needed'"
+    "vercel-build": "yum install -y nss atk at-spi2-atk gtk3 cups-libs libdrm libxkbcommon libxcomposite libxdamage libxrandr mesa-libgbm xorg-x11-server-Xvfb alsa-lib"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "chrome-aws-lambda": "^10.1.0",
+    "@sparticuz/chromium": "^131.0.2",
     "@upstash/redis": "^1.28.0",
-    "puppeteer-core": "^10.1.0"
+    "puppeteer-core": "^23.5.2"
   },
   "engines": {
     "node": "22"
