@@ -10,8 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sparticuz/chromium": "^119.0.0",
+    "@sparticuz/chromium": "109.0.0",
     "@upstash/redis": "^1.28.0",
-    "playwright-core": "^1.40.1"
+    "playwright-core": "1.30.0"
   }
 }
