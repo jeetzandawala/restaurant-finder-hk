@@ -5,13 +5,6 @@ import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
 
-// Import all the checker functions
-import { checkChope } from '../checkers/chope.js';
-import { checkSevenRooms } from '../checkers/sevenrooms.js';
-import { checkTableCheck } from '../checkers/tablecheck.js';
-import { checkResDiary } from '../checkers/resdiary.js';
-import { checkBistrochat } from '../checkers/bistrochat.js';
-
 // --- Caching Setup ---
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
@@ -22,11 +15,11 @@ const BATCH_SIZE = 5;
 const CACHE_EXPIRATION_SECONDS = 300; // 5 minutes
 
 const platformCheckers = {
-  sevenrooms: checkSevenRooms,
-  tablecheck: checkTableCheck,
-  resdiary: checkResDiary,
-  chope: checkChope,
-  bistrochat: checkBistrochat,
+  sevenrooms: (await import('../checkers/sevenrooms.js')).checkSevenRooms,
+  tablecheck: (await import('../checkers/tablecheck.js')).checkTableCheck,
+  resdiary: (await import('../checkers/resdiary.js')).checkResDiary,
+  chope: (await import('../checkers/chope.js')).checkChope,
+  bistrochat: (await import('../checkers/bistrochat.js')).checkBistrochat,
 };
 
 export default async function handler(request, response) {
@@ -57,13 +50,13 @@ export default async function handler(request, response) {
     // --- Launch Serverless-Compatible Browser ---
     browser = await playwright.chromium.launch({
         args: chromium.args,
-        executablePath: await chromium.executablePath, // <<< THE FINAL, CORRECT FIX
-        headless: true, 
+        executablePath: await chromium.executablePath(), // Correct for latest version
+        headless: chromium.headless, // Correct for latest version
         ignoreHTTPSErrors: true,
     });
 
     const context = await browser.newContext({
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
     });
 
     const results = { available: [], unavailable: [], generatedAt: new Date().toISOString() };
@@ -75,7 +68,7 @@ export default async function handler(request, response) {
         const checker = platformCheckers[restaurant.platform];
         if (checker) {
           const page = await context.newPage();
-          page.setDefaultNavigationTimeout(45000); // 45 seconds
+          page.setDefaultNavigationTimeout(60000); // Increased timeout
           try {
             return await checker(page, restaurant, query);
           } finally {

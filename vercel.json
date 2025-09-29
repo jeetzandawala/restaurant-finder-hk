@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/check.js": {
-      "includeFiles": "restaurants.json"
+      "memory": 3008,
+      "maxDuration": 60
     }
   }
 }
