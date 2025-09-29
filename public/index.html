@@ -35,7 +35,8 @@
         // --- React Component Starts Here ---
 
         const { useState, useCallback } = React;
-        const { Search, Clock, Users, Calendar, ExternalLink, ThumbsDown, ThumbsUp, LoaderCircle } = lucide;
+        // CORRECTED LINE: The icon library uses the global variable "LucideReact", not "lucide".
+        const { Search, Clock, Users, Calendar, ExternalLink, ThumbsDown, ThumbsUp, LoaderCircle } = LucideReact;
 
         // Helper component for loading spinner
         const LoadingSpinner = () => (
@@ -198,3 +199,4 @@
     </script>
 </body>
 </html>
+
