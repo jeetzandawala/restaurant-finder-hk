@@ -10,7 +10,7 @@ import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
 import { checkBistrochat } from '../checkers/bistrochat.js';
 
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 2; // Reduced to prevent browser service overload
 const CACHE_EXPIRATION_SECONDS = 300; // 5 minutes
 
 const platformCheckers = {
@@ -83,6 +83,8 @@ export default async function handler(request, response) {
     browser = await puppeteer.connect({
         browserWSEndpoint,
         ignoreHTTPSErrors: true,
+        protocolTimeout: 180000, // 3 minutes
+        slowMo: 50, // Add small delay between operations
     });
 
     const results = { available: [], unavailable: [], generatedAt: new Date().toISOString() };
@@ -92,13 +94,24 @@ export default async function handler(request, response) {
       const promises = batch.map(async (restaurant) => {
         const checker = platformCheckers[restaurant.platform];
         if (checker) {
-          const page = await browser.newPage();
-          await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36');
-          page.setDefaultNavigationTimeout(60000);
+          let page = null;
           try {
-            return await checker(page, restaurant, query);
+            page = await browser.newPage();
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36');
+            page.setDefaultNavigationTimeout(30000); // Reduced timeout
+            const result = await checker(page, restaurant, query);
+            return result;
+          } catch (error) {
+            console.error(`Error checking ${restaurant.name}:`, error.message);
+            return { status: 'unavailable', name: restaurant.name, url: restaurant.url };
           } finally {
-            await page.close();
+            if (page) {
+              try {
+                await page.close();
+              } catch (closeError) {
+                console.warn(`Error closing page for ${restaurant.name}:`, closeError.message);
+              }
+            }
           }
         }
         return { status: 'skipped', name: restaurant.name, url: restaurant.url };

@@ -1,4 +1,6 @@
 // checkers/resdiary.js
+import { getPageText, safeGoto } from './utils.js';
+
 export async function checkResDiary(page, restaurant, query) {
   const url = restaurant.url;
   try {
@@ -8,7 +10,7 @@ export async function checkResDiary(page, restaurant, query) {
     await page.waitForTimeout(5000);
     
     // Get page content
-    const content = await page.textContent('body');
+    const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
     // Check for various unavailability messages

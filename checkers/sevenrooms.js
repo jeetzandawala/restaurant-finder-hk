@@ -1,4 +1,6 @@
 // checkers/sevenrooms.js
+import { getPageText, safeGoto } from './utils.js';
+
 export async function checkSevenRooms(page, restaurant, query) {
   // Use the full URL if provided, otherwise construct from slug
   let url;
@@ -32,7 +34,7 @@ export async function checkSevenRooms(page, restaurant, query) {
     }
     
     // Then check page content for various unavailability messages
-    const content = await page.textContent('body');
+    const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
     // Check for explicit "no availability" messages
