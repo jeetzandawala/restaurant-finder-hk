@@ -4,7 +4,6 @@ import playwright from 'playwright-core';
 import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 // Import all the checker functions
 import { checkChope } from '../checkers/chope.js';
@@ -52,16 +51,14 @@ export default async function handler(request, response) {
     response.setHeader('X-Cache-Status', 'MISS');
     
     // --- Load restaurant data from local JSON file ---
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-    const jsonPath = path.join(__dirname, '..', 'restaurants.json');
+    const jsonPath = path.join(process.cwd(), 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
     // --- Launch Serverless-Compatible Browser ---
     browser = await playwright.chromium.launch({
         args: chromium.args,
         executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
+        headless: true, // <<< THIS IS THE FIX
         ignoreHTTPSErrors: true,
     });
 
@@ -80,8 +77,7 @@ export default async function handler(request, response) {
           const page = await context.newPage();
           page.setDefaultNavigationTimeout(45000); // 45 seconds
           try {
-            // THE FIX IS HERE!
-            return await checker(page, restaurant, query); 
+            return await checker(page, restaurant, query);
           } finally {
             await page.close();
           }
