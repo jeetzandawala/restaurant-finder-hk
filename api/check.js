@@ -7,7 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Import all the checker functions
-import { checkChope } from '../checkers/chope.js'; // CORRECTED IMPORT
+import { checkChope } from '../checkers/chope.js';
 import { checkSevenRooms } from '../checkers/sevenrooms.js';
 import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
@@ -26,7 +26,7 @@ const platformCheckers = {
   sevenrooms: checkSevenRooms,
   tablecheck: checkTableCheck,
   resdiary: checkResDiary,
-  chope: checkChope, // This was already correct
+  chope: checkChope,
   bistrochat: checkBistrochat,
 };
 
@@ -62,7 +62,7 @@ export default async function handler(request, response) {
         args: chromium.args,
         executablePath: await chromium.executablePath(),
         headless: chromium.headless,
-        ignoreHTTPSError: true,
+        ignoreHTTPSErrors: true,
     });
 
     const context = await browser.newContext({
@@ -80,7 +80,8 @@ export default async function handler(request, response) {
           const page = await context.newPage();
           page.setDefaultNavigationTimeout(45000); // 45 seconds
           try {
-            return await checker(page, query, restaurant);
+            // THE FIX IS HERE!
+            return await checker(page, restaurant, query); 
           } finally {
             await page.close();
           }
