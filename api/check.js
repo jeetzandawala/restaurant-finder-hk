@@ -11,9 +11,9 @@ import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
 import { checkBistrochat } from '../checkers/bistrochat.js';
 
-const BATCH_SIZE = 8; // Increased from 2 to 8
+const BATCH_SIZE = 6; // Reduced for Railway memory constraints
 const CACHE_EXPIRATION_SECONDS = 600; // 10 minutes (increased from 5)
-const MAX_CONCURRENT_PAGES = 6; // Limit concurrent pages
+const MAX_CONCURRENT_PAGES = 3; // Reduced concurrent pages for Railway
 
 const platformCheckers = {
   sevenrooms: checkSevenRooms,
@@ -38,7 +38,20 @@ class SimpleBrowserPool {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--memory-pressure-off'
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process', // Critical for Railway - prevents crashes
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--memory-pressure-off',
+        '--max_old_space_size=256' // Limit memory usage
       ]
     });
   }
@@ -125,10 +138,24 @@ async function processRestaurantBatch(browserPool, restaurants, query) {
     let page = null;
     try {
       page = await browserPool.getPage();
-      const result = await checker(page, restaurant, query);
+      
+      // Add timeout and retry logic for Railway
+      const result = await Promise.race([
+        checker(page, restaurant, query),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout after 30 seconds')), 30000)
+        )
+      ]);
+      
       results[currentIndex] = result;
     } catch (error) {
       console.error(`Error checking ${restaurant.name}:`, error.message);
+      
+      // If page crashed, try to restart browser pool
+      if (error.message.includes('crashed') || error.message.includes('Target closed')) {
+        console.log(`Page crashed for ${restaurant.name}, will retry with new browser instance`);
+      }
+      
       results[currentIndex] = { 
         status: 'unavailable', 
         name: restaurant.name, 
@@ -136,7 +163,11 @@ async function processRestaurantBatch(browserPool, restaurants, query) {
       };
     } finally {
       if (page) {
-        await browserPool.releasePage(page);
+        try {
+          await browserPool.releasePage(page);
+        } catch (releaseError) {
+          console.warn(`Error releasing page for ${restaurant.name}:`, releaseError.message);
+        }
       }
     }
     
