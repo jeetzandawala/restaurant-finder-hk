@@ -1,17 +1,19 @@
-// api/check.js
+// api/check.js - Simplified high-performance version
 import { Redis } from '@upstash/redis';
+import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
 
-// Standard, simple imports for all checker functions
+// Import existing checkers (no changes needed)
 import { checkChope } from '../checkers/chope.js';
 import { checkSevenRooms } from '../checkers/sevenrooms.js';
 import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
 import { checkBistrochat } from '../checkers/bistrochat.js';
 
-const BATCH_SIZE = 2; // Reduced to prevent browser service overload
-const CACHE_EXPIRATION_SECONDS = 300; // 5 minutes
+const BATCH_SIZE = 8; // Increased from 2 to 8
+const CACHE_EXPIRATION_SECONDS = 600; // 10 minutes (increased from 5)
+const MAX_CONCURRENT_PAGES = 6; // Limit concurrent pages
 
 const platformCheckers = {
   sevenrooms: checkSevenRooms,
@@ -21,136 +23,216 @@ const platformCheckers = {
   bistrochat: checkBistrochat,
 };
 
-export default async function handler(request, response) {
-  let browser = null;
-  
-  // Initialize Redis only if credentials are available
-  let redis = null;
-  const useCache = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
-  
-  if (useCache) {
-    redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+// Simple browser pool
+class SimpleBrowserPool {
+  constructor() {
+    this.browser = null;
+    this.pages = [];
+  }
+
+  async initialize() {
+    this.browser = await chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--memory-pressure-off'
+      ]
     });
   }
 
+  async getPage() {
+    if (this.pages.length > 0) {
+      return this.pages.pop();
+    }
+    
+    const page = await this.browser.newPage();
+    await page.setExtraHTTPHeaders({
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    });
+    page.setDefaultNavigationTimeout(20000);
+    
+    return page;
+  }
+
+  async releasePage(page) {
+    try {
+      await page.goto('about:blank');
+      if (this.pages.length < MAX_CONCURRENT_PAGES) {
+        this.pages.push(page);
+      } else {
+        await page.close();
+      }
+    } catch (error) {
+      try { await page.close(); } catch {}
+    }
+  }
+
+  async cleanup() {
+    // Close all pages
+    await Promise.all(this.pages.map(page => page.close().catch(() => {})));
+    this.pages = [];
+    
+    // Close browser
+    if (this.browser) {
+      await this.browser.close();
+    }
+  }
+}
+
+// Smart caching with longer TTL
+async function getFromCache(redis, cacheKey) {
+  if (!redis) return null;
+  
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      const data = JSON.parse(cached);
+      // Check if cache is less than 10 minutes old
+      const cacheAge = Date.now() - new Date(data.generatedAt).getTime();
+      if (cacheAge < CACHE_EXPIRATION_SECONDS * 1000) {
+        return data;
+      }
+    }
+  } catch (error) {
+    console.warn('Cache read error:', error.message);
+  }
+  
+  return null;
+}
+
+// Batch processing with concurrency control
+async function processRestaurantBatch(browserPool, restaurants, query) {
+  const semaphore = Array(MAX_CONCURRENT_PAGES).fill(null);
+  let index = 0;
+  const results = [];
+
+  const processNext = async () => {
+    const currentIndex = index++;
+    if (currentIndex >= restaurants.length) return;
+    
+    const restaurant = restaurants[currentIndex];
+    const checker = platformCheckers[restaurant.platform];
+    
+    if (!checker) {
+      results[currentIndex] = { status: 'skipped', name: restaurant.name, url: restaurant.url };
+      await processNext();
+      return;
+    }
+
+    let page = null;
+    try {
+      page = await browserPool.getPage();
+      const result = await checker(page, restaurant, query);
+      results[currentIndex] = result;
+    } catch (error) {
+      console.error(`Error checking ${restaurant.name}:`, error.message);
+      results[currentIndex] = { 
+        status: 'unavailable', 
+        name: restaurant.name, 
+        url: restaurant.url 
+      };
+    } finally {
+      if (page) {
+        await browserPool.releasePage(page);
+      }
+    }
+    
+    await processNext();
+  };
+
+  // Start concurrent processing
+  await Promise.all(semaphore.map(() => processNext()));
+  return results.filter(Boolean);
+}
+
+export default async function handler(request, response) {
+  let browserPool = null;
+  let redis = null;
+  
   try {
     const { date, partySize, time } = request.query;
     if (!date || !partySize || !time) {
-      return response.status(400).json({ error: 'Missing required query parameters: date, partySize, time' });
+      return response.status(400).json({ 
+        error: 'Missing required parameters: date, partySize, time' 
+      });
     }
-    const query = { date, partySize, time };
 
-    const cacheKey = `reservations:${date}:${partySize}:${time}`;
+    // Initialize Redis (optional)
+    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+      redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      });
+    }
+
+    const cacheKey = `simple:${date}:${partySize}:${time}`;
     
-    // Check cache only if Redis is available
-    if (redis) {
-      try {
-        const cachedResults = await redis.get(cacheKey);
-        if (cachedResults) {
-          console.log('CACHE HIT:', cacheKey);
-          response.setHeader('X-Cache-Status', 'HIT');
-          return response.status(200).json(cachedResults);
-        }
-        console.log('CACHE MISS:', cacheKey);
-        response.setHeader('X-Cache-Status', 'MISS');
-      } catch (redisError) {
-        console.warn('Redis error, proceeding without cache:', redisError.message);
-        response.setHeader('X-Cache-Status', 'ERROR');
-      }
-    } else {
-      console.log('CACHE DISABLED: Redis credentials not configured');
-      response.setHeader('X-Cache-Status', 'DISABLED');
+    // Check cache first
+    const cachedData = await getFromCache(redis, cacheKey);
+    if (cachedData) {
+      response.setHeader('X-Cache-Status', 'HIT');
+      response.setHeader('X-Performance', 'Cached');
+      return response.status(200).json(cachedData);
     }
 
+    // Load restaurants
     const jsonPath = path.join(process.cwd(), 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
-    // --- Connect to External Browser Service ---
-    const { default: puppeteer } = await import('puppeteer-core');
-    
-    const browserWSEndpoint = process.env.BROWSERLESS_WS_ENDPOINT;
-    
-    if (!browserWSEndpoint) {
-      return response.status(500).json({
-        error: 'Browser service not configured',
-        message: 'Please set BROWSERLESS_WS_ENDPOINT environment variable',
-        instructions: 'Get a free API token from https://browserless.io and set BROWSERLESS_WS_ENDPOINT=wss://chrome.browserless.io?token=YOUR_TOKEN'
-      });
-    }
-    
-    browser = await puppeteer.connect({
-        browserWSEndpoint,
-        ignoreHTTPSErrors: true,
-        protocolTimeout: 180000, // 3 minutes
-        slowMo: 50, // Add small delay between operations
-    });
+    // Initialize browser pool
+    browserPool = new SimpleBrowserPool();
+    await browserPool.initialize();
 
-    const results = { available: [], unavailable: [], generatedAt: new Date().toISOString() };
+    const results = { 
+      available: [], 
+      unavailable: [], 
+      generatedAt: new Date().toISOString(),
+      totalRestaurants: restaurants.length
+    };
 
+    // Process in larger batches for better performance
+    console.log(`Processing ${restaurants.length} restaurants in batches of ${BATCH_SIZE}...`);
+    
     for (let i = 0; i < restaurants.length; i += BATCH_SIZE) {
       const batch = restaurants.slice(i, i + BATCH_SIZE);
-      const promises = batch.map(async (restaurant) => {
-        const checker = platformCheckers[restaurant.platform];
-        if (checker) {
-          let page = null;
-          try {
-            page = await browser.newPage();
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36');
-            page.setDefaultNavigationTimeout(30000); // Reduced timeout
-            const result = await checker(page, restaurant, query);
-            return result;
-          } catch (error) {
-            console.error(`Error checking ${restaurant.name}:`, error.message);
-            return { status: 'unavailable', name: restaurant.name, url: restaurant.url };
-          } finally {
-            if (page) {
-              try {
-                await page.close();
-              } catch (closeError) {
-                console.warn(`Error closing page for ${restaurant.name}:`, closeError.message);
-              }
-            }
-          }
-        }
-        return { status: 'skipped', name: restaurant.name, url: restaurant.url };
-      });
-
-      const batchResults = await Promise.allSettled(promises);
+      const batchResults = await processRestaurantBatch(browserPool, batch, { date, partySize, time });
+      
       batchResults.forEach(result => {
-        if (result.status === 'fulfilled' && result.value.status !== 'skipped') {
-           if (result.value.status === 'available') {
-             results.available.push(result.value);
-           } else {
-             results.unavailable.push(result.value);
-           }
-        } else if (result.status === 'rejected') {
-            console.error('A checker promise was rejected:', result.reason);
+        if (result.status === 'available') {
+          results.available.push(result);
+        } else if (result.status === 'unavailable') {
+          results.unavailable.push(result);
         }
       });
     }
 
-    if (redis && (results.available.length > 0 || results.unavailable.length > 0)) {
-        try {
-          await redis.set(cacheKey, JSON.stringify(results), { ex: CACHE_EXPIRATION_SECONDS });
-          console.log('CACHE SET:', cacheKey);
-        } catch (redisError) {
-          console.warn('Redis cache write error:', redisError.message);
-        }
+    // Cache results
+    if (redis) {
+      try {
+        await redis.set(cacheKey, JSON.stringify(results), { ex: CACHE_EXPIRATION_SECONDS });
+      } catch (error) {
+        console.warn('Cache write error:', error.message);
+      }
     }
 
+    response.setHeader('X-Cache-Status', 'MISS');
+    response.setHeader('X-Performance', 'Fresh');
+    response.setHeader('X-Available-Count', results.available.length);
+    
     return response.status(200).json(results);
 
   } catch (error) {
-    console.error('Unhandled error in serverless function:', error);
+    console.error('Handler error:', error);
     return response.status(500).json({
-        error: 'An internal server error occurred.',
-        details: error.message
+      error: 'Internal server error',
+      details: error.message
     });
   } finally {
-    if (browser) {
-      await browser.close();
+    if (browserPool) {
+      await browserPool.cleanup();
     }
   }
 }

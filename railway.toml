@@ -1,0 +1,12 @@
+# railway.toml - Simple Railway deployment
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+
+[env]
+NODE_ENV = "production"
+PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "false"

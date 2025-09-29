@@ -1,8 +1,11 @@
 {
   "functions": {
     "api/check.js": {
-      "memory": 512,
+      "memory": 1024,
       "maxDuration": 60
     }
+  },
+  "env": {
+    "NODE_ENV": "production"
   }
 }

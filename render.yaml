@@ -1,0 +1,14 @@
+# render.yaml - Simple Render deployment
+services:
+  - type: web
+    name: restaurant-checker
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: node simple-server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+        value: "false"
