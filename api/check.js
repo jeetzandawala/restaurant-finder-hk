@@ -12,12 +12,6 @@ import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
 import { checkBistrochat } from '../checkers/bistrochat.js';
 
-// --- Caching Setup ---
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
-
 const BATCH_SIZE = 5; 
 const CACHE_EXPIRATION_SECONDS = 300; // 5 minutes
 
@@ -31,6 +25,11 @@ const platformCheckers = {
 
 export default async function handler(request, response) {
   let browser = null;
+  const redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+
   try {
     const { date, partySize, time } = request.query;
     if (!date || !partySize || !time) {
@@ -50,15 +49,13 @@ export default async function handler(request, response) {
     console.log('CACHE MISS:', cacheKey);
     response.setHeader('X-Cache-Status', 'MISS');
     
-    // --- Load restaurant data from local JSON file ---
     const jsonPath = path.join(process.cwd(), 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
-    // --- Launch Serverless-Compatible Browser ---
     browser = await playwright.chromium.launch({
         args: chromium.args,
-        executablePath: await chromium.executablePath,
-        headless: true,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
         ignoreHTTPSErrors: true,
     });
 
@@ -68,7 +65,6 @@ export default async function handler(request, response) {
 
     const results = { available: [], unavailable: [], generatedAt: new Date().toISOString() };
 
-    // --- Process restaurants in batches ---
     for (let i = 0; i < restaurants.length; i += BATCH_SIZE) {
       const batch = restaurants.slice(i, i + BATCH_SIZE);
       const promises = batch.map(async (restaurant) => {
@@ -86,7 +82,6 @@ export default async function handler(request, response) {
       });
       
       const batchResults = await Promise.allSettled(promises);
-
       batchResults.forEach(result => {
         if (result.status === 'fulfilled' && result.value.status !== 'skipped') {
            if (result.value.status === 'available') {
@@ -100,7 +95,6 @@ export default async function handler(request, response) {
       });
     }
     
-    // --- Set cache for future requests ---
     if (results.available.length > 0 || results.unavailable.length > 0) {
         await redis.set(cacheKey, JSON.stringify(results), { ex: CACHE_EXPIRATION_SECONDS });
         console.log('CACHE SET:', cacheKey);
