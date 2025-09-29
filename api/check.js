@@ -1,7 +1,7 @@
 // api/check.js
 import { Redis } from '@upstash/redis';
-import playwright from 'playwright-core';
-import chromium from '@sparticuz/chromium';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium-min';
 import fs from 'fs';
 import path from 'path';
 
@@ -53,25 +53,12 @@ export default async function handler(request, response) {
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
     // --- Launch Serverless-Compatible Browser ---
-    browser = await playwright.chromium.launch({
-        args: [
-            ...chromium.args,
-            '--disable-gpu',
-            '--disable-dev-shm-usage',
-            '--disable-setuid-sandbox',
-            '--no-first-run',
-            '--no-sandbox',
-            '--no-zygote',
-            '--single-process',
-            '--disable-extensions'
-        ],
+    browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
         executablePath: await chromium.executablePath(),
-        headless: true,
+        headless: chromium.headless,
         ignoreHTTPSErrors: true,
-    });
-
-    const context = await browser.newContext({
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'
     });
 
     const results = { available: [], unavailable: [], generatedAt: new Date().toISOString() };
@@ -81,7 +68,8 @@ export default async function handler(request, response) {
       const promises = batch.map(async (restaurant) => {
         const checker = platformCheckers[restaurant.platform];
         if (checker) {
-          const page = await context.newPage();
+          const page = await browser.newPage();
+          await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36');
           page.setDefaultNavigationTimeout(60000);
           try {
             return await checker(page, restaurant, query);

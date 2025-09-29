@@ -11,8 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sparticuz/chromium": "^123.0.1",
+    "@sparticuz/chromium-min": "^123.0.0",
     "@upstash/redis": "^1.28.0",
-    "playwright-core": "^1.44.0"
+    "puppeteer-core": "^21.0.0"
   }
 }
