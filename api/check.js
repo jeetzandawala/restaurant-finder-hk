@@ -65,7 +65,7 @@ export default async function handler(request, response) {
             '--single-process',
             '--disable-extensions'
         ],
-        executablePath: await chromium.executablePath('/opt/chromium'),
+        executablePath: await chromium.executablePath(),
         headless: chromium.headless,
         ignoreHTTPSErrors: true,
     });
