@@ -57,8 +57,8 @@ export default async function handler(request, response) {
     // --- Launch Serverless-Compatible Browser ---
     browser = await playwright.chromium.launch({
         args: chromium.args,
-        executablePath: await chromium.executablePath(),
-        headless: true, // <<< THIS IS THE FIX
+        executablePath: chromium.executablePath, // <<< THIS IS THE FINAL FIX
+        headless: true,
         ignoreHTTPSErrors: true,
     });
 
