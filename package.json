@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "vercel-build": "yum install -y glib2 nss libxss libasound"
+    "vercel-build": "echo 'Using @sparticuz/chromium - no additional packages needed'"
   },
   "keywords": [],
   "author": "",
