@@ -53,8 +53,15 @@ export default async function handler(request, response) {
     // --- Connect to External Browser Service ---
     const { default: puppeteer } = await import('puppeteer-core');
     
-    // Use Browserless.io (free tier available) or set up your own
-    const browserWSEndpoint = process.env.BROWSERLESS_WS_ENDPOINT || 'wss://chrome.browserless.io?token=your-api-token';
+    const browserWSEndpoint = process.env.BROWSERLESS_WS_ENDPOINT;
+    
+    if (!browserWSEndpoint) {
+      return response.status(500).json({
+        error: 'Browser service not configured',
+        message: 'Please set BROWSERLESS_WS_ENDPOINT environment variable',
+        instructions: 'Get a free API token from https://browserless.io and set BROWSERLESS_WS_ENDPOINT=wss://chrome.browserless.io?token=YOUR_TOKEN'
+      });
+    }
     
     browser = await puppeteer.connect({
         browserWSEndpoint,
