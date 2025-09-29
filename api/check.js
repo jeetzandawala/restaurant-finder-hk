@@ -1,7 +1,5 @@
 // api/check.js
 import { Redis } from '@upstash/redis';
-import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
 import fs from 'fs';
 import path from 'path';
 
@@ -53,11 +51,16 @@ export default async function handler(request, response) {
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
     // --- Launch Serverless-Compatible Browser ---
+    const { default: chromium } = await import('@sparticuz/chromium');
+    const { default: puppeteer } = await import('puppeteer-core');
+    
+    const executablePath = await chromium.executablePath();
+    
     browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: 'new',
+        executablePath,
+        headless: chromium.headless,
         ignoreHTTPSErrors: true,
     });
 
