@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "vercel-build": "yum install -y nss atk at-spi2-atk gtk3 cups-libs libdrm libxkbcommon libxcomposite libxdamage libxrandr mesa-libgbm xorg-x11-server-Xvfb alsa-lib"
+    "vercel-build": "yum install -y nss atk at-spi2-atk gtk3 cups-libs libdrm libxkbcommon libXcomposite libXdamage libXrandr mesa-libgbm xorg-x11-server-Xvfb alsa-lib"
   },
   "keywords": [],
   "author": "",
