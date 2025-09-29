@@ -5,14 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "vercel-build": "yum install -y nss"
+    "vercel-build": "yum install -y glib2 nss libxss libasound"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sparticuz/chromium": "^119.0.0",
+    "@sparticuz/chromium": "^123.0.1",
     "@upstash/redis": "^1.28.0",
-    "playwright-core": "^1.40.1"
+    "playwright-core": "^1.44.0"
   }
 }
