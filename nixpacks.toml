@@ -1,0 +1,12 @@
+# nixpacks.toml - Override cached Railway settings
+[phases.setup]
+nixPkgs = ["nodejs-18_x"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npx playwright install-deps chromium || true", "npx playwright install chromium"]
+
+[start]
+cmd = "node server.js"
