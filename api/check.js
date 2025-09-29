@@ -58,7 +58,7 @@ export default async function handler(request, response) {
     browser = await playwright.chromium.launch({
         args: chromium.args,
         executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
+        headless: true, // <<< THE DEFINITIVE FIX IS HERE
         ignoreHTTPSErrors: true,
     });
 
