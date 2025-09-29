@@ -1,15 +1,17 @@
 {
-  "name": "restaurant-availability-checker-api",
+  "name": "restaurant-finder-hk",
   "version": "1.0.0",
-  "description": "A serverless API to check for table availability across multiple booking platforms.",
-  "main": "api/check.js",
-  "type": "module",
-  "scripts": {},
-  "dependencies": {
-    "@sparticuz/chromium": "^123.0.1",
-    "@upstash/redis": "^1.22.0",
-    "playwright-core": "^1.44.1"
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "devDependencies": {}
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@sparticuz/chromium": "109.0.0",
+    "@upstash/redis": "^1.28.0",
+    "playwright-core": "1.30.0"
+  }
 }
-
