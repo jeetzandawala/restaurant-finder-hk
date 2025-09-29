@@ -4,15 +4,12 @@
   "description": "A serverless API to check for table availability across multiple booking platforms.",
   "main": "api/check.js",
   "type": "module",
-  "scripts": {
-    "postinstall": "npx playwright install webkit"
-  },
+  "scripts": {},
   "dependencies": {
+    "@sparticuz/chromium": "^123.0.1",
     "@upstash/redis": "^1.22.0",
     "playwright-core": "^1.44.1"
   },
-  "devDependencies": {
-    "playwright": "^1.44.1"
-  }
+  "devDependencies": {}
 }
 
