@@ -5,14 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "vercel-build": "yum install -y nss atk at-spi2-atk gtk3 cups-libs libdrm libxkbcommon libXcomposite libXdamage libXrandr mesa-libgbm xorg-x11-server-Xvfb alsa-lib"
+    "vercel-build": "echo 'Using external browser service - no local browser installation needed'"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "puppeteer-core": "^21.11.0",
-    "@sparticuz/chromium": "^123.0.1",
     "@upstash/redis": "^1.28.0"
   },
   "engines": {

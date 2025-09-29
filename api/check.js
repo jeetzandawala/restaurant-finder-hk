@@ -50,15 +50,14 @@ export default async function handler(request, response) {
     const jsonPath = path.join(process.cwd(), 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
-    // --- Launch Serverless-Compatible Browser ---
+    // --- Connect to External Browser Service ---
     const { default: puppeteer } = await import('puppeteer-core');
-    const { default: chromium } = await import('@sparticuz/chromium');
     
-    browser = await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: true,
+    // Use Browserless.io (free tier available) or set up your own
+    const browserWSEndpoint = process.env.BROWSERLESS_WS_ENDPOINT || 'wss://chrome.browserless.io?token=your-api-token';
+    
+    browser = await puppeteer.connect({
+        browserWSEndpoint,
         ignoreHTTPSErrors: true,
     });
 
