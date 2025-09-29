@@ -12,7 +12,7 @@ import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
 import { checkBistrochat } from '../checkers/bistrochat.js';
 
-const BATCH_SIZE = 5; 
+const BATCH_SIZE = 5;
 const CACHE_EXPIRATION_SECONDS = 300; // 5 minutes
 
 const platformCheckers = {
@@ -48,14 +48,15 @@ export default async function handler(request, response) {
 
     console.log('CACHE MISS:', cacheKey);
     response.setHeader('X-Cache-Status', 'MISS');
-    
+
     const jsonPath = path.join(process.cwd(), 'restaurants.json');
     const restaurants = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
+    // --- Launch Serverless-Compatible Browser ---
     browser = await playwright.chromium.launch({
         args: chromium.args,
         executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
+        headless: true, // <<< THE FINAL, CORRECT FIX
         ignoreHTTPSErrors: true,
     });
 
@@ -71,7 +72,7 @@ export default async function handler(request, response) {
         const checker = platformCheckers[restaurant.platform];
         if (checker) {
           const page = await context.newPage();
-          page.setDefaultNavigationTimeout(60000); 
+          page.setDefaultNavigationTimeout(60000);
           try {
             return await checker(page, restaurant, query);
           } finally {
@@ -80,7 +81,7 @@ export default async function handler(request, response) {
         }
         return { status: 'skipped', name: restaurant.name, url: restaurant.url };
       });
-      
+
       const batchResults = await Promise.allSettled(promises);
       batchResults.forEach(result => {
         if (result.status === 'fulfilled' && result.value.status !== 'skipped') {
@@ -94,7 +95,7 @@ export default async function handler(request, response) {
         }
       });
     }
-    
+
     if (results.available.length > 0 || results.unavailable.length > 0) {
         await redis.set(cacheKey, JSON.stringify(results), { ex: CACHE_EXPIRATION_SECONDS });
         console.log('CACHE SET:', cacheKey);
@@ -104,9 +105,9 @@ export default async function handler(request, response) {
 
   } catch (error) {
     console.error('Unhandled error in serverless function:', error);
-    return response.status(500).json({ 
+    return response.status(500).json({
         error: 'An internal server error occurred.',
-        details: error.message 
+        details: error.message
     });
   } finally {
     if (browser) {
