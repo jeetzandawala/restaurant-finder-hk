@@ -89,22 +89,46 @@ class SimpleBrowserPool {
   }
 }
 
-// Smart caching with longer TTL
+// Smart caching with robust error handling
 async function getFromCache(redis, cacheKey) {
   if (!redis) return null;
   
   try {
     const cached = await redis.get(cacheKey);
-    if (cached) {
-      const data = JSON.parse(cached);
-      // Check if cache is less than 10 minutes old
-      const cacheAge = Date.now() - new Date(data.generatedAt).getTime();
-      if (cacheAge < CACHE_EXPIRATION_SECONDS * 1000) {
-        return data;
+    if (cached && typeof cached === 'string') {
+      let data;
+      try {
+        data = JSON.parse(cached);
+      } catch (parseError) {
+        console.warn(`Cache parse error for key ${cacheKey}:`, parseError.message);
+        // Clear corrupted cache entry
+        await redis.del(cacheKey);
+        return null;
+      }
+      
+      // Validate data structure
+      if (data && data.generatedAt && data.totalRestaurants) {
+        const cacheAge = Date.now() - new Date(data.generatedAt).getTime();
+        if (cacheAge < CACHE_EXPIRATION_SECONDS * 1000) {
+          console.log(`Cache hit: ${data.totalRestaurants} restaurants, age: ${Math.round(cacheAge/1000)}s`);
+          return data;
+        } else {
+          console.log(`Cache expired: age ${Math.round(cacheAge/1000)}s > ${CACHE_EXPIRATION_SECONDS}s`);
+          await redis.del(cacheKey);
+        }
+      } else {
+        console.warn(`Invalid cache data structure for key ${cacheKey}`);
+        await redis.del(cacheKey);
       }
     }
   } catch (error) {
-    console.warn('Cache read error:', error.message);
+    console.warn(`Cache read error for key ${cacheKey}:`, error.message);
+    // Try to clear potentially corrupted cache
+    try {
+      await redis.del(cacheKey);
+    } catch (delError) {
+      console.warn('Failed to clear corrupted cache:', delError.message);
+    }
   }
   
   return null;
@@ -234,10 +258,14 @@ export default async function handler(request, response) {
       });
     }
 
-    // Cache results
-    if (redis) {
+    // Cache results with validation
+    if (redis && results.totalRestaurants > 0) {
       try {
-        await redis.set(cacheKey, JSON.stringify(results), { ex: CACHE_EXPIRATION_SECONDS });
+        const cacheData = JSON.stringify(results);
+        // Validate JSON before caching
+        JSON.parse(cacheData); // Test parse
+        await redis.set(cacheKey, cacheData, { ex: CACHE_EXPIRATION_SECONDS });
+        console.log(`Cached ${results.totalRestaurants} restaurants for ${CACHE_EXPIRATION_SECONDS}s`);
       } catch (error) {
         console.warn('Cache write error:', error.message);
       }
