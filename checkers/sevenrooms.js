@@ -37,18 +37,19 @@ export async function checkSevenRooms(page, restaurant, query) {
     const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
-    // Check for explicit "no availability" messages
+    // Check for explicit "no availability" messages - but be more specific
     const unavailabilityMessages = [
       'there is no availability that meets your search criteria',
-      'no availability that meets your search criteria',
+      'no availability that meets your search criteria', 
       'no times available',
       'fully booked',
-      'no availability',
       'not available for this date',
       'no tables available',
       'sold out'
     ];
     
+    // Only return unavailable if we find specific unavailability messages
+    // Skip generic "no availability" as it might be part of UI text
     for (const message of unavailabilityMessages) {
       if (contentLower.includes(message)) {
         return { name: restaurant.name, status: 'unavailable', url };
@@ -56,7 +57,7 @@ export async function checkSevenRooms(page, restaurant, query) {
     }
     
     // Look for positive indicators of availability
-    // 1. Check for "Experiences Available" text (common on SevenRooms)
+    // 1. Check for "Experiences Available" text (common on SevenRooms experiences pages)
     if (contentLower.includes('experiences available') || contentLower.includes('experience available')) {
       return { name: restaurant.name, status: 'available', url };
     }
@@ -78,6 +79,11 @@ export async function checkSevenRooms(page, restaurant, query) {
     
     // If we found multiple time references, likely has availability
     if (timeSlotCount >= 3) {
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // Check for reservations page indicators (even with fewer time slots)
+    if (contentLower.includes('select a time') && timeSlotCount >= 2) {
       return { name: restaurant.name, status: 'available', url };
     }
     

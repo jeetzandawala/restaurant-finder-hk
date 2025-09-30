@@ -3,13 +3,13 @@
     "name": "Amber",
     "platform": "sevenrooms",
     "slug": "ambermandarin",
-    "url": "https://www.sevenrooms.com/experiences/ambermandarin"
+    "url": "https://www.sevenrooms.com/reservations/ambermandarin"
   },
   {
     "name": "Andō",
     "platform": "sevenrooms",
     "slug": "andohk",
-    "url": "https://www.sevenrooms.com/experiences/andohk"
+    "url": "https://www.sevenrooms.com/reservations/andohk"
   },
   {
     "name": "aqua",
@@ -51,7 +51,7 @@
     "name": "Chachawan",
     "platform": "sevenrooms",
     "slug": "chachawan",
-    "url": "https://www.sevenrooms.com/experiences/chachawan"
+    "url": "https://www.sevenrooms.com/reservations/chachawan"
   },
   {
     "name": "chapter",
@@ -69,13 +69,13 @@
     "name": "Duddell's",
     "platform": "sevenrooms",
     "slug": "duddellshk",
-    "url": "https://www.sevenrooms.com/experiences/duddellshk"
+    "url": "https://www.sevenrooms.com/reservations/duddellshk"
   },
   {
     "name": "Estro",
     "platform": "sevenrooms",
     "slug": "estrohk",
-    "url": "https://www.sevenrooms.com/experiences/estrohk"
+    "url": "https://www.sevenrooms.com/reservations/estrohk"
   },
   {
     "name": "FALCONE",
@@ -135,7 +135,7 @@
     "name": "Leela",
     "platform": "sevenrooms",
     "slug": "leela",
-    "url": "https://www.sevenrooms.com/experiences/leela"
+    "url": "https://www.sevenrooms.com/reservations/leela"
   },
   {
     "name": "Limewood",
@@ -147,7 +147,7 @@
     "name": "Louise",
     "platform": "sevenrooms",
     "slug": "louise",
-    "url": "https://www.sevenrooms.com/experiences/louise?venues=louise"
+    "url": "https://www.sevenrooms.com/reservations/louise"
   },
   {
     "name": "LPM Hong Kong",
@@ -171,13 +171,13 @@
     "name": "MONO",
     "platform": "sevenrooms",
     "slug": "monohk",
-    "url": "https://www.sevenrooms.com/experiences/monohk"
+    "url": "https://www.sevenrooms.com/reservations/monohk"
   },
   {
     "name": "MORA",
     "platform": "sevenrooms",
     "slug": "mora",
-    "url": "https://www.sevenrooms.com/experiences/mora"
+    "url": "https://www.sevenrooms.com/reservations/mora"
   },
   {
     "name": "Mott 32",
@@ -207,7 +207,7 @@
     "name": "Tate Dining Room",
     "platform": "sevenrooms",
     "slug": "tatediningroom",
-    "url": "https://www.sevenrooms.com/experiences/tatediningroom"
+    "url": "https://www.sevenrooms.com/reservations/tatediningroom"
   },
   {
     "name": "The Aubrey",
@@ -219,7 +219,7 @@
     "name": "The Krug Room",
     "platform": "sevenrooms",
     "slug": "mohkgthekrugroom",
-    "url": "https://www.sevenrooms.com/experiences/mohkgthekrugroom"
+    "url": "https://www.sevenrooms.com/reservations/mohkgthekrugroom"
   },
   {
     "name": "Tin Lung Heen",
@@ -231,7 +231,7 @@
     "name": "22 Ships",
     "platform": "sevenrooms",
     "slug": "22ships",
-    "url": "https://www.sevenrooms.com/experiences/22ships"
+    "url": "https://www.sevenrooms.com/reservations/22ships"
   },
   {
     "name": "Hutong",
