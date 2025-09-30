@@ -32,29 +32,61 @@ export async function checkResDiary(page, restaurant, query) {
       }
     }
     
-    // Look for the SPECIFIC time slot requested
-    const requestedTime = query.time; // e.g., "19:00"
-    const timeVariants = [
-      requestedTime, // "19:00"
-      requestedTime.replace(':', ''), // "1900"
-      requestedTime.substring(0, 5), // "19:00"
-      requestedTime.replace(':', '.'), // "19.00"
-      `${requestedTime}:00`, // "19:00:00"
+    // Look for time slots in content
+    const timePatterns = [
+      /\b\d{1,2}:\d{2}\s*(am|pm)\b/gi,
+      /\b\d{1,2}:\d{2}\b/g,
     ];
     
-    // Check if our specific requested time appears in clickable elements
-    for (const timeVariant of timeVariants) {
-      if (contentLower.includes(timeVariant.toLowerCase())) {
-        const timeElements = await page.$$(`button:has-text("${timeVariant}"), [data-time*="${timeVariant}"], .time-slot:has-text("${timeVariant}")`);
-        if (timeElements.length > 0) {
-          return { name: restaurant.name, status: 'available', url };
-        }
+    let timeSlotCount = 0;
+    for (const pattern of timePatterns) {
+      const matches = content.match(pattern);
+      if (matches) {
+        timeSlotCount += matches.length;
       }
     }
     
-    // Look for booking form elements
-    const bookingElements = await page.$$('form, .booking-form, button[type="submit"], .reserve-button');
-    if (bookingElements.length > 0) {
+    if (timeSlotCount >= 3) {
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // Look for ResDiary-specific availability indicators
+    const resdiaryKeywords = [
+      'book now',
+      'reserve now',
+      'make reservation',
+      'select time',
+      'available times',
+      'choose date'
+    ];
+    
+    for (const keyword of resdiaryKeywords) {
+      if (contentLower.includes(keyword)) {
+        return { name: restaurant.name, status: 'available', url };
+      }
+    }
+    
+    // Look for time elements in DOM
+    const allElements = await page.$$('button, a, div, span');
+    let foundTimeElements = 0;
+    
+    for (const element of allElements.slice(0, 100)) {
+      try {
+        const text = await element.textContent();
+        if (text && (text.match(/\d{1,2}:\d{2}/) || text.match(/\d{1,2}(am|pm)/i))) {
+          foundTimeElements++;
+          if (foundTimeElements >= 3) {
+            return { name: restaurant.name, status: 'available', url };
+          }
+        }
+      } catch (e) {
+        // Skip
+      }
+    }
+    
+    // Look for booking buttons
+    const allButtons = await page.$$('button, input[type="submit"], form');
+    if (allButtons.length >= 2) {
       return { name: restaurant.name, status: 'available', url };
     }
     

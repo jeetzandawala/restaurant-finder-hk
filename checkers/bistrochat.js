@@ -32,30 +32,76 @@ export async function checkBistrochat(page, restaurant, query) {
       }
     }
     
-    // Look for the SPECIFIC time slot requested
-    const requestedTime = query.time; // e.g., "19:00"
-    const timeVariants = [
-      requestedTime, // "19:00"
-      requestedTime.replace(':', ''), // "1900"
-      requestedTime.substring(0, 5), // "19:00"
-      requestedTime.replace(':', '.'), // "19.00"
-      `${requestedTime}:00`, // "19:00:00"
+    // Look for time slots in the page content (Bistrochat shows many time options)
+    const timePatterns = [
+      /\b\d{1,2}:\d{2}\b/g, // "19:00", "12:30"
+      /\b\d{1,2}:\d{2}\s*(am|pm)\b/gi, // "7:00 pm"
     ];
     
-    // Check if our specific requested time appears in clickable elements
-    for (const timeVariant of timeVariants) {
-      if (contentLower.includes(timeVariant.toLowerCase())) {
-        const timeElements = await page.$$(`button:has-text("${timeVariant}"), [data-time*="${timeVariant}"], .time-slot:has-text("${timeVariant}")`);
-        if (timeElements.length > 0) {
-          return { name: restaurant.name, status: 'available', url };
-        }
+    let timeSlotCount = 0;
+    for (const pattern of timePatterns) {
+      const matches = content.match(pattern);
+      if (matches) {
+        timeSlotCount += matches.length;
       }
     }
     
-    // Look for booking form elements
-    const bookingElements = await page.$$('form, .booking-form, button[type="submit"], .book-button');
-    if (bookingElements.length > 0) {
+    // Bistrochat typically shows many time slots when available
+    if (timeSlotCount >= 5) {
       return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // Look for Bistrochat-specific booking keywords
+    const bookingKeywords = [
+      'book now',
+      'reserve now',
+      'how many of you',
+      'when would you like',
+      'what time would',
+      'join us',
+      'book a table'
+    ];
+    
+    for (const keyword of bookingKeywords) {
+      if (contentLower.includes(keyword)) {
+        return { name: restaurant.name, status: 'available', url };
+      }
+    }
+    
+    // Look for time elements in DOM (Bistrochat has many time buttons)
+    const allElements = await page.$$('button, div, span');
+    let foundTimeElements = 0;
+    
+    for (const element of allElements.slice(0, 100)) {
+      try {
+        const text = await element.textContent();
+        if (text && text.match(/^\d{1,2}:\d{2}$/)) { // Exact time format like "19:00"
+          foundTimeElements++;
+          if (foundTimeElements >= 5) {
+            return { name: restaurant.name, status: 'available', url };
+          }
+        }
+      } catch (e) {
+        // Skip
+      }
+    }
+    
+    // Look for booking buttons
+    const allButtons = await page.$$('button, input[type="submit"]');
+    for (const button of allButtons.slice(0, 30)) {
+      try {
+        const buttonText = await button.textContent();
+        if (buttonText) {
+          const lowerText = buttonText.toLowerCase();
+          if (lowerText.includes('book') || 
+              lowerText.includes('reserve') ||
+              lowerText.includes('table')) {
+            return { name: restaurant.name, status: 'available', url };
+          }
+        }
+      } catch (e) {
+        // Skip
+      }
     }
     
     // Bistrochat seems to work reliably, so assume available if no explicit unavailability

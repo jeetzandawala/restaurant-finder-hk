@@ -65,24 +65,37 @@ export async function checkChope(page, restaurant, query) {
       }
     }
     
-    // Look for the SPECIFIC time slot requested
-    const requestedTime = query.time; // e.g., "19:00"
-    const timeVariants = [
-      requestedTime, // "19:00"
-      requestedTime.replace(':', ''), // "1900"
-      requestedTime.substring(0, 5), // "19:00"
-      requestedTime.replace(':', '.'), // "19.00"
-      `${requestedTime}:00`, // "19:00:00"
+    // Look for time slots in content
+    const timePatterns = [
+      /\b\d{1,2}:\d{2}\s*(am|pm)\b/gi,
+      /\b\d{1,2}:\d{2}\b/g,
     ];
     
-    // Check if our specific requested time appears in the page content or elements
-    for (const timeVariant of timeVariants) {
-      if (contentLower.includes(timeVariant.toLowerCase())) {
-        // Found the time in content, check for selectable elements
-        const timeElements = await safeQuery(page, `button, option, .time-slot`);
-        if (timeElements.length > 0) {
-          return { name: restaurant.name, status: 'available', url };
-        }
+    let timeSlotCount = 0;
+    for (const pattern of timePatterns) {
+      const matches = content.match(pattern);
+      if (matches) {
+        timeSlotCount += matches.length;
+      }
+    }
+    
+    if (timeSlotCount >= 3) {
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // Look for Chope-specific availability indicators
+    const chopeKeywords = [
+      'available timeslots',
+      'select time',
+      'choose time',
+      'book now',
+      'reserve now',
+      'make reservation'
+    ];
+    
+    for (const keyword of chopeKeywords) {
+      if (contentLower.includes(keyword)) {
+        return { name: restaurant.name, status: 'available', url };
       }
     }
     

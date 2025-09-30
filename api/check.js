@@ -157,27 +157,34 @@ async function processRestaurantBatch(browserPool, restaurants, query) {
     try {
       page = await browserPool.getPage();
       
-      // Aggressive timeout with 8 vCPUs - much faster processing
+      // More resilient timeout handling with faster fallback
       const result = await Promise.race([
         checker(page, restaurant, query),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout after 60 seconds')), 60000)
+          setTimeout(() => reject(new Error('Timeout after 45 seconds')), 45000)
         )
       ]);
       
       results[currentIndex] = result;
     } catch (error) {
-      console.error(`Error checking ${restaurant.name}:`, error.message);
+      // Reduce noise in logs for expected failures
+      const isExpectedError = error.message.includes('crashed') || 
+                              error.message.includes('Timeout') || 
+                              error.message.includes('Target closed') ||
+                              error.message.includes('Target page');
       
-      // If page crashed, try to restart browser pool
-      if (error.message.includes('crashed') || error.message.includes('Target closed')) {
-        console.log(`Page crashed for ${restaurant.name}, will retry with new browser instance`);
+      if (isExpectedError) {
+        console.log(`${restaurant.name}: ${error.message.split(':')[0]} (expected)`);
+      } else {
+        console.error(`Unexpected error for ${restaurant.name}:`, error.message);
       }
       
       results[currentIndex] = { 
         status: 'unavailable', 
         name: restaurant.name, 
-        url: restaurant.url 
+        url: restaurant.url,
+        reason: error.message.includes('crashed') ? 'site_protection' : 
+                error.message.includes('Timeout') ? 'timeout' : 'error'
       };
     } finally {
       if (page) {

@@ -31,40 +31,75 @@ export async function checkTableCheck(page, restaurant, query) {
       }
     }
     
-    // Look for the SPECIFIC time slot requested
-    const requestedTime = query.time; // e.g., "19:00"
-    const timeVariants = [
-      requestedTime, // "19:00"
-      requestedTime.replace(':', ''), // "1900"
-      requestedTime.substring(0, 5), // "19:00"
-      requestedTime.replace(':', '.'), // "19.00"
-      `${requestedTime}:00`, // "19:00:00"
+    // Look for time slots in the page content
+    const timePatterns = [
+      /\b\d{1,2}:\d{2}\s*(am|pm)\b/gi, // "7:00 pm", "12:30 am"
+      /\b\d{1,2}:\d{2}\b/g, // "19:00", "12:30"
     ];
     
-    // Check if our specific requested time appears in clickable elements
-    for (const timeVariant of timeVariants) {
-      if (contentLower.includes(timeVariant.toLowerCase())) {
-        // Look for time selection elements
-        const timeElements = await page.$$(`button:has-text("${timeVariant}"), [data-time*="${timeVariant}"], .time-slot:has-text("${timeVariant}")`);
-        if (timeElements.length > 0) {
-          return { name: restaurant.name, status: 'available', url };
-        }
+    let timeSlotCount = 0;
+    for (const pattern of timePatterns) {
+      const matches = content.match(pattern);
+      if (matches) {
+        timeSlotCount += matches.length;
       }
     }
     
-    // Look for general booking indicators
-    const bookingElements = await page.$$('button[type="submit"], .book-now, .reserve-now, input[type="submit"]');
-    if (bookingElements.length > 0) {
-      // Check if any contain booking-related text
-      for (const element of bookingElements) {
-        const elementText = await element.textContent();
-        if (elementText && (
-          elementText.toLowerCase().includes('book') || 
-          elementText.toLowerCase().includes('reserve') ||
-          elementText.toLowerCase().includes('confirm')
-        )) {
-          return { name: restaurant.name, status: 'available', url };
+    // If we found multiple time references, likely has availability
+    if (timeSlotCount >= 3) {
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // Look for booking-related keywords
+    const bookingKeywords = [
+      'find availability',
+      'select a time',
+      'choose time',
+      'available times',
+      'book now',
+      'reserve now'
+    ];
+    
+    for (const keyword of bookingKeywords) {
+      if (contentLower.includes(keyword)) {
+        return { name: restaurant.name, status: 'available', url };
+      }
+    }
+    
+    // Look for time slot elements more broadly
+    const allElements = await page.$$('button, a, div, span');
+    let foundTimeElements = 0;
+    
+    for (const element of allElements.slice(0, 100)) {
+      try {
+        const text = await element.textContent();
+        if (text && (text.match(/\d{1,2}:\d{2}/) || text.match(/\d{1,2}(am|pm)/i))) {
+          foundTimeElements++;
+          if (foundTimeElements >= 3) {
+            return { name: restaurant.name, status: 'available', url };
+          }
         }
+      } catch (e) {
+        // Skip elements that can't be accessed
+      }
+    }
+    
+    // Look for booking buttons with flexible text matching
+    const allButtons = await page.$$('button, input[type="submit"], a');
+    for (const button of allButtons.slice(0, 50)) {
+      try {
+        const buttonText = await button.textContent();
+        if (buttonText) {
+          const lowerText = buttonText.toLowerCase();
+          if (lowerText.includes('book') || 
+              lowerText.includes('reserve') ||
+              lowerText.includes('find availability') ||
+              lowerText.includes('select')) {
+            return { name: restaurant.name, status: 'available', url };
+          }
+        }
+      } catch (e) {
+        // Skip
       }
     }
     
