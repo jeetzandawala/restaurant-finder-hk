@@ -99,11 +99,11 @@ export async function checkChope(page, restaurant, query) {
       }
     }
     
-    // Also check all clickable elements for the specific time
+    // Also check all clickable elements for time patterns
     const allClickableElements = await safeQuery(page, 'button, a, option, .clickable, [role="button"]');
     for (const element of allClickableElements) {
       const elementText = await getElementText(element);
-      if (elementText && timeVariants.some(variant => elementText.includes(variant))) {
+      if (elementText && (elementText.match(/\d{1,2}:\d{2}/) || elementText.match(/\d{1,2}(am|pm)/i))) {
         return { name: restaurant.name, status: 'available', url };
       }
     }
@@ -111,6 +111,21 @@ export async function checkChope(page, restaurant, query) {
     // Check for restaurant selection or calendar elements (indicates working booking system)
     const functionalElements = await safeQuery(page, 'select, .calendar, .date-picker, form');
     if (functionalElements.length > 2) { // More than just basic page elements
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // Check for forms (booking forms indicate availability)
+    const forms = await safeQuery(page, 'form');
+    if (forms.length >= 1) {
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // Check page structure - if it has many interactive elements, likely available
+    const buttons = await safeQuery(page, 'button');
+    const links = await safeQuery(page, 'a');
+    
+    // Chope pages with booking capability have many interactive elements
+    if (buttons.length > 10 || links.length > 50) {
       return { name: restaurant.name, status: 'available', url };
     }
     

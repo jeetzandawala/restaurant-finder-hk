@@ -103,6 +103,24 @@ export async function checkTableCheck(page, restaurant, query) {
       }
     }
     
+    // Check for forms (booking forms indicate availability)
+    const forms = await page.$$('form');
+    if (forms.length >= 1) {
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // If page has reasonable structure but no explicit unavailability, assume available
+    const pageStructure = {
+      buttons: allButtons.length,
+      links: (await page.$$('a')).length,
+      forms: forms.length
+    };
+    
+    // If page has interactive elements and no unavailability messages, likely available
+    if (pageStructure.buttons > 5 || pageStructure.links > 10) {
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
     // Default to unavailable if we can't find positive indicators of availability
     return { name: restaurant.name, status: 'unavailable', url };
     
