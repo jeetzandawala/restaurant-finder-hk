@@ -11,9 +11,9 @@ import { checkTableCheck } from '../checkers/tablecheck.js';
 import { checkResDiary } from '../checkers/resdiary.js';
 import { checkBistrochat } from '../checkers/bistrochat.js';
 
-const BATCH_SIZE = 50; // MASSIVE batches with 8GB RAM!
+const BATCH_SIZE = 61; // Process all restaurants in one batch
 const CACHE_EXPIRATION_SECONDS = 1800; // 30 minutes with high performance
-const MAX_CONCURRENT_PAGES = 20; // Max out with 8 vCPUs + 8GB RAM
+const MAX_CONCURRENT_PAGES = 25; // Optimized for Railway Hobby: 8GB RAM / 8 vCPU
 
 const platformCheckers = {
   sevenrooms: checkSevenRooms,
@@ -44,8 +44,9 @@ class SimpleBrowserPool {
         '--disable-features=TranslateUI',
         '--disable-extensions',
         '--memory-pressure-off',
-        '--max_old_space_size=2000', // MASSIVE memory with 8GB RAM!
-        '--js-flags="--max-old-space-size=2000"'
+        '--max-old-space-size=6144', // Use 6GB of 8GB RAM (Railway Hobby)
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
       ]
     });
   }

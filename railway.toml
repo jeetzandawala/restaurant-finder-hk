@@ -1,4 +1,4 @@
-# railway.toml - ENTERPRISE LEVEL: 8GB RAM + 8 vCPUs
+# railway.toml - Optimized for Railway Hobby Plan: 8GB RAM + 8 vCPUs
 [build]
 builder = "nixpacks"
 
@@ -7,8 +7,10 @@ healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure" 
 startCommand = "node server.js"
+numReplicas = 1
 
 [env]
 NODE_ENV = "production"
-NODE_OPTIONS = "--max-old-space-size=6000 --max-semi-space-size=1024"
+NODE_OPTIONS = "--max-old-space-size=6144 --max-semi-space-size=1024 --expose-gc"
 UV_THREADPOOL_SIZE = "16"
+PLAYWRIGHT_BROWSERS_PATH = "/root/.cache/ms-playwright"

@@ -1,16 +1,16 @@
-# nixpacks.toml - ENTERPRISE: 8GB RAM + 8 vCPUs BEAST MODE
+# nixpacks.toml - Optimized for Railway Hobby: 8GB RAM + 8 vCPUs ($5/month)
 [phases.setup]
 nixPkgs = ["nodejs-18_x"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm install --production=false"]
 
 [phases.build]
 cmds = [
   "npx playwright install-deps chromium || true", 
   "npx playwright install chromium",
-  "echo 'ENTERPRISE MODE: 8GB RAM + 8 vCPUs - MAXIMUM PERFORMANCE!'"
+  "echo '✅ Railway Hobby Optimized: 25 concurrent pages, 6GB RAM allocated'"
 ]
 
 [start]
-cmd = "NODE_OPTIONS='--max-old-space-size=6000 --max-semi-space-size=1024' UV_THREADPOOL_SIZE=16 node server.js"
+cmd = "NODE_OPTIONS='--max-old-space-size=6144 --max-semi-space-size=1024 --expose-gc' UV_THREADPOOL_SIZE=16 node server.js"

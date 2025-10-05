@@ -12,7 +12,7 @@ import { checkResDiary } from '../checkers/resdiary.js';
 import { checkBistrochat } from '../checkers/bistrochat.js';
 
 const CACHE_EXPIRATION_SECONDS = 1800; // 30 minutes
-const MAX_CONCURRENT_PAGES = 15; // Optimized for speed
+const MAX_CONCURRENT_PAGES = 25; // Optimized for Railway Hobby: 8GB RAM / 8 vCPU
 
 const platformCheckers = {
   sevenrooms: checkSevenRooms,
@@ -40,6 +40,10 @@ class FastBrowserPool {
         '--disable-web-security',
         '--disable-features=IsolateOrigins,site-per-process',
         '--memory-pressure-off',
+        '--max-old-space-size=6144', // Use 6GB of 8GB RAM
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
       ]
     });
   }
