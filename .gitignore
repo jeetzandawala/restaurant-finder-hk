@@ -1,3 +1,41 @@
-node_modules
-.vercel
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+server.log
+
+# Test files
+test-*.js
+debug-*.js
+analyze-*.js
+test-*.json
+
+# Debug images
+debug-*.png
+*.png
+
+# Backups
+*.backup
+
+# Environment
 .env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# Test data
+beast_*.json
+full_*.json
+.vercel/

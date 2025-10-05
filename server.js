@@ -2,6 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import checkHandler from './api/check.js';
+import checkStreamHandler from './api/check-stream.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -31,7 +32,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Main API endpoint
+// Main API endpoint (legacy)
 app.get('/api/check', async (req, res) => {
   try {
     await checkHandler(req, res);
@@ -41,6 +42,21 @@ app.get('/api/check', async (req, res) => {
       error: 'Internal server error',
       details: error.message
     });
+  }
+});
+
+// Streaming API endpoint (new, optimized)
+app.get('/api/check-stream', async (req, res) => {
+  try {
+    await checkStreamHandler(req, res);
+  } catch (error) {
+    console.error('Stream error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Internal server error',
+        details: error.message
+      });
+    }
   }
 });
 

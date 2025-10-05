@@ -1,28 +1,35 @@
-// checkers/tablecheck.js
+// checkers/tablecheck.js - Accurate version with date validation
 import { getPageText, safeGoto } from './utils.js';
 
 export async function checkTableCheck(page, restaurant, query) {
   const url = restaurant.url || `https://www.tablecheck.com/en/${restaurant.slug}/reserve`;
+  
   try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     
-    // Wait for dynamic content to load
-    await page.waitForTimeout(5000);
+    // Handle modals
+    await handleModals(page);
+    
+    // Wait for content
+    await page.waitForTimeout(6000);
+    
+    // Try to set the date and party size if there are input fields
+    await setBookingParameters(page, query);
     
     // Get page content
     const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
-    // Check for various unavailability messages
+    // STRICT CHECK 1: Explicit unavailability messages
     const unavailableMessages = [
       'no available slots',
-      'no availability',
-      'fully booked',
-      'not available',
-      'no tables available',
+      'no availability for',
+      'fully booked on',
+      'not available on',
+      'no tables available on',
       'sold out',
-      'no reservations available',
-      'no slots available'
+      'no reservations available on',
+      'no slots available for'
     ];
     
     for (const message of unavailableMessages) {
@@ -31,71 +38,67 @@ export async function checkTableCheck(page, restaurant, query) {
       }
     }
     
-    // Look for time slots in the page content
-    const timePatterns = [
-      /\b\d{1,2}:\d{2}\s*(am|pm)\b/gi, // "7:00 pm", "12:30 am"
-      /\b\d{1,2}:\d{2}\b/g, // "19:00", "12:30"
-    ];
+    // STRICT CHECK 2: Verify requested date is on the page
+    const dateFormats = formatDateForValidation(query.date);
+    let dateFoundOnPage = false;
     
-    let timeSlotCount = 0;
-    for (const pattern of timePatterns) {
-      const matches = content.match(pattern);
-      if (matches) {
-        timeSlotCount += matches.length;
+    for (const format of Object.values(dateFormats)) {
+      if (content.includes(format)) {
+        dateFoundOnPage = true;
+        break;
       }
     }
     
-    // If we found multiple time references, likely has availability
-    if (timeSlotCount >= 3) {
-      return { name: restaurant.name, status: 'available', url };
+    if (!dateFoundOnPage) {
+      console.log(`${restaurant.name}: Date not found on page - might be showing wrong date`);
     }
     
-    // Look for booking-related keywords
-    const bookingKeywords = [
-      'find availability',
-      'select a time',
-      'choose time',
-      'available times',
-      'book now',
-      'reserve now'
+    // STRICT CHECK 3: Look for clickable time slot buttons
+    const timeSlotSelectors = [
+      'button[data-time]',
+      'button[data-slot]',
+      '.time-slot',
+      '.available-time',
+      'button[class*="time"]',
+      'button[class*="slot"]'
     ];
     
-    for (const keyword of bookingKeywords) {
-      if (contentLower.includes(keyword)) {
-        return { name: restaurant.name, status: 'available', url };
-      }
-    }
-    
-    // Look for time slot elements more broadly
-    const allElements = await page.$$('button, a, div, span');
-    let foundTimeElements = 0;
-    
-    for (const element of allElements.slice(0, 100)) {
+    let clickableTimeSlots = 0;
+    for (const selector of timeSlotSelectors) {
       try {
-        const text = await element.textContent();
-        if (text && (text.match(/\d{1,2}:\d{2}/) || text.match(/\d{1,2}(am|pm)/i))) {
-          foundTimeElements++;
-          if (foundTimeElements >= 3) {
-            return { name: restaurant.name, status: 'available', url };
+        const elements = await page.$$(selector);
+        for (const el of elements) {
+          const isVisible = await el.isVisible();
+          const isEnabled = await el.isEnabled();
+          if (isVisible && isEnabled) {
+            clickableTimeSlots++;
           }
         }
       } catch (e) {
-        // Skip elements that can't be accessed
+        // Continue
       }
     }
     
-    // Look for booking buttons with flexible text matching
-    const allButtons = await page.$$('button, input[type="submit"], a');
-    for (const button of allButtons.slice(0, 50)) {
+    if (clickableTimeSlots >= 2) {
+      console.log(`${restaurant.name}: Found ${clickableTimeSlots} clickable time slots`);
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // STRICT CHECK 4: Look for time buttons with proper format
+    const allButtons = await page.$$('button, a[role="button"]');
+    let validTimeButtons = 0;
+    
+    for (const button of allButtons) {
       try {
-        const buttonText = await button.textContent();
-        if (buttonText) {
-          const lowerText = buttonText.toLowerCase();
-          if (lowerText.includes('book') || 
-              lowerText.includes('reserve') ||
-              lowerText.includes('find availability') ||
-              lowerText.includes('select')) {
-            return { name: restaurant.name, status: 'available', url };
+        const text = await button.textContent();
+        const isVisible = await button.isVisible();
+        const isEnabled = await button.isEnabled();
+        
+        if (text && isVisible && isEnabled) {
+          // Match time formats
+          const timeMatch = text.match(/\b\d{1,2}:\d{2}\s*(AM|PM)?\b/i);
+          if (timeMatch) {
+            validTimeButtons++;
           }
         }
       } catch (e) {
@@ -103,29 +106,107 @@ export async function checkTableCheck(page, restaurant, query) {
       }
     }
     
-    // Check for forms (booking forms indicate availability)
-    const forms = await page.$$('form');
-    if (forms.length >= 1) {
+    if (validTimeButtons >= 3) {
+      console.log(`${restaurant.name}: Found ${validTimeButtons} time buttons`);
       return { name: restaurant.name, status: 'available', url };
     }
     
-    // If page has reasonable structure but no explicit unavailability, assume available
-    const pageStructure = {
-      buttons: allButtons.length,
-      links: (await page.$$('a')).length,
-      forms: forms.length
-    };
+    // STRICT CHECK 5: Check for booking-specific UI elements
+    const hasBookingUI = contentLower.includes('select a time') || 
+                         contentLower.includes('choose a time') ||
+                         contentLower.includes('available times');
     
-    // If page has interactive elements and no unavailability messages, likely available
-    if (pageStructure.buttons > 5 || pageStructure.links > 10) {
+    if (hasBookingUI && validTimeButtons > 0) {
+      console.log(`${restaurant.name}: Has booking UI with times`);
       return { name: restaurant.name, status: 'available', url };
     }
     
-    // Default to unavailable if we can't find positive indicators of availability
+    // CONSERVATIVE DEFAULT
+    console.log(`${restaurant.name}: No strong availability indicators`);
     return { name: restaurant.name, status: 'unavailable', url };
     
   } catch (error) {
     console.error(`TableCheck error for ${restaurant.name}:`, error.message);
     return { name: restaurant.name, status: 'unavailable', url };
   }
+}
+
+// Helper: Set booking parameters in form fields
+async function setBookingParameters(page, query) {
+  try {
+    // Try to fill date input
+    const dateInput = await page.$('input[type="date"], input[name*="date"]');
+    if (dateInput) {
+      await dateInput.fill(query.date);
+      await page.waitForTimeout(1000);
+    }
+    
+    // Try to fill party size
+    const partySizeSelect = await page.$('select[name*="party"], select[name*="guest"]');
+    if (partySizeSelect) {
+      await partySizeSelect.selectOption(query.partySize);
+      await page.waitForTimeout(1000);
+    }
+    
+    // Try to click search/find button
+    const searchButton = await page.$('button:has-text("Search"), button:has-text("Find")');
+    if (searchButton) {
+      await searchButton.click();
+      await page.waitForTimeout(2000);
+    }
+  } catch (error) {
+    // Parameter setting failed, continue with default page load
+  }
+}
+
+// Helper: Handle modals
+async function handleModals(page) {
+  try {
+    const closeSelectors = [
+      'button[aria-label="Close"]',
+      '.modal-close',
+      '.close-button',
+      'button:has-text("✕")',
+      'button:has-text("Close")'
+    ];
+    
+    for (const selector of closeSelectors) {
+      try {
+        const closeButton = await page.$(selector);
+        if (closeButton && await closeButton.isVisible()) {
+          await closeButton.click();
+          await page.waitForTimeout(1000);
+          break;
+        }
+      } catch (e) {
+        // Continue
+      }
+    }
+    
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  } catch (error) {
+    // Continue
+  }
+}
+
+// Helper: Format date for validation
+function formatDateForValidation(dateString) {
+  const date = new Date(dateString + 'T12:00:00');
+  
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const month = date.getMonth();
+  const day = date.getDate();
+  const year = date.getFullYear();
+  
+  return {
+    fullFormat: `${months[month]} ${day}, ${year}`,
+    shortFormat: `${monthsShort[month]} ${day}, ${year}`,
+    numericFormat: `${month + 1}/${day}/${year}`,
+    isoFormat: dateString
+  };
 }

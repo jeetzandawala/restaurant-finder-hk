@@ -1,0 +1,50 @@
+{
+  "name": "Hong Kong Table Finder",
+  "short_name": "HK Tables",
+  "description": "Find available restaurant tables in Hong Kong instantly. Check 70+ premium restaurants across all major platforms.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["food", "lifestyle", "travel"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%233b82f6%22 rx=%2220%22/><text x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22>🍽️</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%233b82f6%22 rx=%2220%22/><text x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22>🍽️</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Quick Search",
+      "short_name": "Search",
+      "description": "Quickly search for available tables",
+      "url": "/?quick=true",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%233b82f6%22 stroke-width=%222%22><circle cx=%2211%22 cy=%2211%22 r=%228%22></circle><path d=%22m21 21-4.35-4.35%22></path></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 800%22><rect width=%22400%22 height=%22800%22 fill=%22%23f8fafc%22/><rect x=%2220%22 y=%22100%22 width=%22360%22 height=%22200%22 fill=%22%23ffffff%22 rx=%2212%22 stroke=%22%23e2e8f0%22/><text x=%22200%22 y=%22150%22 text-anchor=%22middle%22 font-size=%2216%22 fill=%22%23374151%22>Search Form</text><rect x=%2220%22 y=%22320%22 width=%22360%22 height=%22400%22 fill=%22%23ffffff%22 rx=%2212%22 stroke=%22%23e2e8f0%22/><text x=%22200%22 y=%22370%22 text-anchor=%22middle%22 font-size=%2216%22 fill=%22%23374151%22>Results List</text></svg>",
+      "sizes": "400x800",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ]
+}

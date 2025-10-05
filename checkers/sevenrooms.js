@@ -1,11 +1,10 @@
-// checkers/sevenrooms.js
+// checkers/sevenrooms.js - Accurate version with date validation
 import { getPageText, safeGoto } from './utils.js';
 
 export async function checkSevenRooms(page, restaurant, query) {
-  // Use the full URL if provided, otherwise construct from slug
+  // Construct URL with proper parameters
   let url;
   if (restaurant.url) {
-    // Add query parameters to existing URL
     const urlObj = new URL(restaurant.url);
     urlObj.searchParams.set('date', query.date);
     urlObj.searchParams.set('time', query.time);
@@ -14,144 +13,199 @@ export async function checkSevenRooms(page, restaurant, query) {
   } else {
     url = `https://www.sevenrooms.com/reservations/${restaurant.slug}?date=${query.date}&time=${query.time}&party_size=${query.partySize}`;
   }
+
   try {
-    // Use a more reliable wait strategy and longer timeout
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    // Navigate with longer timeout
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     
-    // Wait for dynamic content to load
-    await page.waitForTimeout(5000);
+    // Handle modals/popups - try to close them
+    await handleModals(page);
     
-    // Check for multiple possible "no availability" indicators
-    const noTimesSelector = 'div[data-testid="no-times-available-message"]';
-    const noAvailabilityText = 'No times available';
-    const fullyBookedText = 'fully booked';
-    const noTimesText = 'no times available';
+    // Wait for dynamic content
+    await page.waitForTimeout(6000);
     
-    // First check for the specific selector
-    const noTimesElement = await page.$(noTimesSelector);
-    if (noTimesElement) {
-      return { name: restaurant.name, status: 'unavailable', url };
-    }
-    
-    // Then check page content for various unavailability messages
+    // Get all page text
     const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
-    // Check for explicit "no availability" messages - but be more specific
-    const unavailabilityMessages = [
+    // STRICT CHECK 1: Look for explicit "no availability" messages
+    const noAvailabilityIndicators = [
       'there is no availability that meets your search criteria',
-      'no availability that meets your search criteria', 
-      'no times available',
-      'fully booked',
+      'no availability that meets your search criteria',
+      'no times available for',
+      'no times available on',
+      'fully booked on',
       'not available for this date',
-      'no tables available',
-      'sold out'
+      'no tables available on',
+      'sold out for'
     ];
     
-    // Only return unavailable if we find specific unavailability messages
-    // Skip generic "no availability" as it might be part of UI text
-    for (const message of unavailabilityMessages) {
-      if (contentLower.includes(message)) {
+    for (const indicator of noAvailabilityIndicators) {
+      if (contentLower.includes(indicator)) {
         return { name: restaurant.name, status: 'unavailable', url };
       }
     }
     
-    // Look for positive indicators of availability
-    // 1. Check for "Experiences Available" text (common on SevenRooms experiences pages)
-    if (contentLower.includes('experiences available') || contentLower.includes('experience available')) {
-      return { name: restaurant.name, status: 'available', url };
-    }
-    
-    // 2. Look for time slots in the page content (more reliable than DOM selectors)
-    const timePatterns = [
-      /\b\d{1,2}:\d{2}\s*(am|pm)\b/gi, // "7:00 pm", "12:30 am"
-      /\b\d{1,2}:\d{2}\b/g, // "19:00", "12:30"
-      /\b(lunch|dinner)\b/gi // "Lunch", "Dinner"
+    // STRICT CHECK 2: Verify the requested date is shown on the page
+    const requestedDate = formatDateForValidation(query.date);
+    const dateFormats = [
+      requestedDate.fullFormat, // "October 6, 2025"
+      requestedDate.shortFormat, // "Oct 6, 2025"
+      requestedDate.numericFormat, // "10/6/2025" or "6/10/2025"
+      requestedDate.isoFormat // "2025-10-06"
     ];
     
-    let timeSlotCount = 0;
-    for (const pattern of timePatterns) {
-      const matches = content.match(pattern);
-      if (matches) {
-        timeSlotCount += matches.length;
+    let dateFoundOnPage = false;
+    for (const dateFormat of dateFormats) {
+      if (content.includes(dateFormat)) {
+        dateFoundOnPage = true;
+        break;
       }
     }
     
-    // If we found multiple time references, likely has availability
-    if (timeSlotCount >= 3) {
-      return { name: restaurant.name, status: 'available', url };
+    // If requested date not found, page might be showing wrong date
+    if (!dateFoundOnPage) {
+      console.log(`${restaurant.name}: Requested date not found on page`);
+      // Continue but be extra strict below
     }
     
-    // Check for reservations page indicators (even with fewer time slots)
-    if (contentLower.includes('select a time') && timeSlotCount >= 2) {
-      return { name: restaurant.name, status: 'available', url };
-    }
+    // STRICT CHECK 3: Look for clickable time slot elements (most reliable)
+    const timeSlotSelectors = [
+      'button[data-testid*="time"]',
+      'button[class*="time"]',
+      'button[class*="slot"]',
+      '.time-slot',
+      '[data-slot-time]',
+      'button:has-text("PM")',
+      'button:has-text("AM")'
+    ];
     
-    // 3. Look for actual time slot elements
-    const timeSlotElements = await page.$$('button, a, div, span');
-    let foundTimeSlots = 0;
-    
-    for (const element of timeSlotElements.slice(0, 100)) { // Check first 100 elements
+    let foundClickableTimeSlots = 0;
+    for (const selector of timeSlotSelectors) {
       try {
-        const text = await element.textContent();
-        if (text && (text.match(/\d{1,2}:\d{2}/) || text.match(/\d{1,2}(am|pm)/i))) {
-          foundTimeSlots++;
-          if (foundTimeSlots >= 3) {
-            return { name: restaurant.name, status: 'available', url };
+        const elements = await page.$$(selector);
+        for (const el of elements) {
+          const isVisible = await el.isVisible();
+          const isEnabled = await el.isEnabled();
+          if (isVisible && isEnabled) {
+            foundClickableTimeSlots++;
           }
         }
       } catch (e) {
-        // Skip elements that can't be accessed
+        // Selector might not be valid, continue
       }
     }
     
-    // 4. Look for booking-related text in content
-    const bookingKeywords = [
-      'view details',
-      'book now',
-      'reserve now', 
-      'make reservation',
-      'find availability',
-      'select time',
-      'choose time',
-      'available times'
-    ];
-    
-    for (const keyword of bookingKeywords) {
-      if (contentLower.includes(keyword)) {
-        return { name: restaurant.name, status: 'available', url };
-      }
+    if (foundClickableTimeSlots >= 2) {
+      console.log(`${restaurant.name}: Found ${foundClickableTimeSlots} clickable time slots`);
+      return { name: restaurant.name, status: 'available', url };
     }
     
-    // 5. Look for booking buttons with more flexible selectors
-    const allButtons = await page.$$('button, a, input[type="submit"]');
-    for (const button of allButtons.slice(0, 50)) {
+    // STRICT CHECK 4: Look for time buttons in the DOM
+    const allButtons = await page.$$('button');
+    let timeButtonsFound = 0;
+    
+    for (const button of allButtons) {
       try {
-        const buttonText = await button.textContent();
-        if (buttonText) {
-          const lowerButtonText = buttonText.toLowerCase();
-          if (lowerButtonText.includes('book') || 
-              lowerButtonText.includes('reserve') || 
-              lowerButtonText.includes('view details') ||
-              lowerButtonText.includes('select') ||
-              lowerButtonText.includes('available')) {
-            const isVisible = await button.isVisible();
-            if (isVisible) {
-              return { name: restaurant.name, status: 'available', url };
-            }
+        const text = await button.textContent();
+        const isVisible = await button.isVisible();
+        const isEnabled = await button.isEnabled();
+        
+        if (text && isVisible && isEnabled) {
+          // Match time formats: "7:00 PM", "19:00", "7:00PM"
+          if (text.match(/\b\d{1,2}:\d{2}\s*(AM|PM)\b/i) || text.match(/^\d{1,2}:\d{2}$/)) {
+            timeButtonsFound++;
           }
         }
       } catch (e) {
-        // Skip elements that can't be accessed
+        // Skip
       }
     }
     
-    // Default to unavailable if we can't find positive indicators of availability
-    // This is more conservative but reduces false positives
+    if (timeButtonsFound >= 3) {
+      console.log(`${restaurant.name}: Found ${timeButtonsFound} time buttons`);
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // STRICT CHECK 5: Check for "Select a time" or "Experiences Available" with visible times
+    const hasSelectTime = contentLower.includes('select a time') || 
+                          contentLower.includes('select time') ||
+                          contentLower.includes('experiences available');
+    
+    if (hasSelectTime && (timeButtonsFound > 0 || foundClickableTimeSlots > 0)) {
+      console.log(`${restaurant.name}: Has booking UI with some time options`);
+      return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // CONSERVATIVE DEFAULT: If we can't find strong evidence of availability, mark unavailable
+    console.log(`${restaurant.name}: No strong availability indicators found`);
     return { name: restaurant.name, status: 'unavailable', url };
     
   } catch (error) {
     console.error(`SevenRooms error for ${restaurant.name}:`, error.message);
     return { name: restaurant.name, status: 'error', url };
   }
+}
+
+// Helper: Handle modals and popups
+async function handleModals(page) {
+  try {
+    // Common modal close selectors
+    const closeSelectors = [
+      'button[aria-label="Close"]',
+      'button[aria-label="close"]',
+      '.modal-close',
+      '.close-button',
+      '[data-dismiss="modal"]',
+      'button:has-text("✕")',
+      'button:has-text("×")',
+      'button:has-text("Close")'
+    ];
+    
+    for (const selector of closeSelectors) {
+      try {
+        const closeButton = await page.$(selector);
+        if (closeButton) {
+          const isVisible = await closeButton.isVisible();
+          if (isVisible) {
+            await closeButton.click();
+            await page.waitForTimeout(1000);
+            console.log('Closed modal/popup');
+            break;
+          }
+        }
+      } catch (e) {
+        // Continue trying other selectors
+      }
+    }
+    
+    // Press Escape key to close modals
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+    
+  } catch (error) {
+    // Modal handling failed, continue anyway
+  }
+}
+
+// Helper: Format date for validation
+function formatDateForValidation(dateString) {
+  const date = new Date(dateString + 'T12:00:00'); // Add time to avoid timezone issues
+  
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const month = date.getMonth();
+  const day = date.getDate();
+  const year = date.getFullYear();
+  
+  return {
+    fullFormat: `${months[month]} ${day}, ${year}`,
+    shortFormat: `${monthsShort[month]} ${day}, ${year}`,
+    numericFormat: `${month + 1}/${day}/${year}`,
+    numericFormatAlt: `${day}/${month + 1}/${year}`,
+    isoFormat: dateString
+  };
 }

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Hong Kong Table Finder</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .test-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1rem 0;
+        }
+        .success { border-color: #10b981; background-color: #f0fdf4; }
+        .error { border-color: #ef4444; background-color: #fef2f2; }
+        .warning { border-color: #f59e0b; background-color: #fffbeb; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        button:hover { background: #2563eb; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        .log {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        input, select {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            margin: 0.25rem;
+        }
+        .form-group {
+            margin: 1rem 0;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 API Integration Test</h1>
+    <p>Use this page to test your Railway API connection before deploying the frontend.</p>
+
+    <!-- Configuration -->
+    <div class="test-container">
+        <h2>⚙️ Configuration</h2>
+        <div class="form-group">
+            <label for="apiUrl">Railway API URL:</label>
+            <input type="url" id="apiUrl" placeholder="https://your-app.railway.app" style="width: 100%; max-width: 400px;">
+            <small style="display: block; color: #6b7280; margin-top: 0.25rem;">
+                Replace "your-app" with your actual Railway deployment URL
+            </small>
+        </div>
+    </div>
+
+    <!-- Basic Connectivity Test -->
+    <div class="test-container" id="connectivityTest">
+        <h2>🔌 Basic Connectivity Test</h2>
+        <p>Tests if your Railway API is reachable and responding.</p>
+        <button onclick="testConnectivity()" id="connectivityBtn">Test Connection</button>
+        <div id="connectivityResult"></div>
+    </div>
+
+    <!-- API Endpoint Test -->
+    <div class="test-container" id="apiTest">
+        <h2>🚀 API Endpoint Test</h2>
+        <p>Tests the actual restaurant search functionality.</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0;">
+            <div class="form-group">
+                <label for="testDate">Date:</label>
+                <input type="date" id="testDate">
+            </div>
+            <div class="form-group">
+                <label for="testPartySize">Party Size:</label>
+                <select id="testPartySize">
+                    <option value="2">2 people</option>
+                    <option value="4">4 people</option>
+                    <option value="6">6 people</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="testTime">Time:</label>
+                <select id="testTime">
+                    <option value="19:00">7:00 PM</option>
+                    <option value="19:30">7:30 PM</option>
+                    <option value="20:00">8:00 PM</option>
+                </select>
+            </div>
+        </div>
+        
+        <button onclick="testAPI()" id="apiBtn">Test Restaurant Search</button>
+        <div id="apiResult"></div>
+    </div>
+
+    <!-- CORS Test -->
+    <div class="test-container" id="corsTest">
+        <h2>🌐 CORS Configuration Test</h2>
+        <p>Tests if your Railway API allows requests from your domain.</p>
+        <button onclick="testCORS()" id="corsBtn">Test CORS</button>
+        <div id="corsResult"></div>
+    </div>
+
+    <!-- Performance Test -->
+    <div class="test-container" id="performanceTest">
+        <h2>⚡ Performance Test</h2>
+        <p>Tests response time and caching behavior.</p>
+        <button onclick="testPerformance()" id="performanceBtn">Run Performance Test</button>
+        <div id="performanceResult"></div>
+    </div>
+
+    <!-- Debug Log -->
+    <div class="test-container">
+        <h2>📋 Debug Log</h2>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="debugLog" class="log"></div>
+    </div>
+
+    <script>
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('testDate').value = tomorrow.toISOString().split('T')[0];
+            
+            // Try to load saved API URL
+            const savedUrl = localStorage.getItem('testApiUrl');
+            if (savedUrl) {
+                document.getElementById('apiUrl').value = savedUrl;
+            }
+        });
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('debugLog');
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logDiv.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[Test] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('debugLog').textContent = '';
+        }
+
+        function getApiUrl() {
+            const url = document.getElementById('apiUrl').value.trim();
+            if (!url) {
+                alert('Please enter your Railway API URL first!');
+                return null;
+            }
+            // Save for next time
+            localStorage.setItem('testApiUrl', url);
+            return url.endsWith('/') ? url.slice(0, -1) : url;
+        }
+
+        function showResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div style="margin-top: 1rem; padding: 1rem; border-radius: 6px; background: ${
+                type === 'success' ? '#f0fdf4' : type === 'error' ? '#fef2f2' : type === 'warning' ? '#fffbeb' : '#f8fafc'
+            }; border: 1px solid ${
+                type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#e2e8f0'
+            };">${message}</div>`;
+        }
+
+        async function testConnectivity() {
+            const btn = document.getElementById('connectivityBtn');
+            const apiUrl = getApiUrl();
+            if (!apiUrl) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            log('Starting connectivity test...');
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'HEAD',
+                    mode: 'cors'
+                });
+
+                if (response.ok) {
+                    showResult('connectivityResult', '✅ Connection successful! Your Railway API is reachable.', 'success');
+                    log(`Connectivity test passed (${response.status})`);
+                } else {
+                    showResult('connectivityResult', `⚠️ API responded with status ${response.status}. Check your deployment.`, 'warning');
+                    log(`Connectivity test warning: HTTP ${response.status}`);
+                }
+            } catch (error) {
+                showResult('connectivityResult', `❌ Connection failed: ${error.message}`, 'error');
+                log(`Connectivity test failed: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Connection';
+            }
+        }
+
+        async function testAPI() {
+            const btn = document.getElementById('apiBtn');
+            const apiUrl = getApiUrl();
+            if (!apiUrl) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Testing API...';
+            
+            const params = {
+                date: document.getElementById('testDate').value,
+                partySize: document.getElementById('testPartySize').value,
+                time: document.getElementById('testTime').value
+            };
+
+            log(`Testing API with params: ${JSON.stringify(params)}`);
+
+            try {
+                const searchParams = new URLSearchParams(params);
+                const url = `${apiUrl}/api/check?${searchParams.toString()}`;
+                
+                const startTime = performance.now();
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                
+                // Validate response structure
+                if (!data || typeof data !== 'object') {
+                    throw new Error('Invalid response format');
+                }
+
+                const availableCount = data.available ? data.available.length : 0;
+                const unavailableCount = data.unavailable ? data.unavailable.length : 0;
+                const totalCount = data.totalRestaurants || (availableCount + unavailableCount);
+
+                showResult('apiResult', 
+                    `✅ API test successful!<br>
+                    <strong>Response time:</strong> ${duration}ms<br>
+                    <strong>Results:</strong> ${availableCount} available, ${unavailableCount} unavailable<br>
+                    <strong>Total restaurants checked:</strong> ${totalCount}<br>
+                    <strong>Generated at:</strong> ${data.generatedAt || 'N/A'}`, 
+                    'success'
+                );
+                log(`API test passed: ${availableCount}/${totalCount} available in ${duration}ms`);
+
+            } catch (error) {
+                showResult('apiResult', `❌ API test failed: ${error.message}`, 'error');
+                log(`API test failed: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Restaurant Search';
+            }
+        }
+
+        async function testCORS() {
+            const btn = document.getElementById('corsBtn');
+            const apiUrl = getApiUrl();
+            if (!apiUrl) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Testing CORS...';
+            log('Testing CORS configuration...');
+
+            try {
+                const response = await fetch(`${apiUrl}/api/check?date=2024-01-01&partySize=2&time=19:00`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Origin': window.location.origin
+                    }
+                });
+
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                };
+
+                showResult('corsResult', 
+                    `✅ CORS test successful!<br>
+                    <strong>Access-Control-Allow-Origin:</strong> ${corsHeaders['Access-Control-Allow-Origin'] || 'Not set'}<br>
+                    <strong>Status:</strong> ${response.status}`, 
+                    'success'
+                );
+                log('CORS test passed');
+
+            } catch (error) {
+                if (error.message.includes('CORS')) {
+                    showResult('corsResult', 
+                        `❌ CORS Error: Your Railway API is not configured to allow requests from this domain.<br>
+                        <strong>Solution:</strong> Add CORS headers to your Railway deployment.`, 
+                        'error'
+                    );
+                    log('CORS test failed: CORS policy violation', 'error');
+                } else {
+                    showResult('corsResult', `❌ CORS test failed: ${error.message}`, 'error');
+                    log(`CORS test failed: ${error.message}`, 'error');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test CORS';
+            }
+        }
+
+        async function testPerformance() {
+            const btn = document.getElementById('performanceBtn');
+            const apiUrl = getApiUrl();
+            if (!apiUrl) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Testing Performance...';
+            log('Starting performance test...');
+
+            const testParams = {
+                date: document.getElementById('testDate').value,
+                partySize: '2',
+                time: '19:00'
+            };
+
+            const results = [];
+
+            try {
+                // Run 3 requests to test caching
+                for (let i = 1; i <= 3; i++) {
+                    log(`Performance test run ${i}/3...`);
+                    
+                    const searchParams = new URLSearchParams(testParams);
+                    const url = `${apiUrl}/api/check?${searchParams.toString()}`;
+                    
+                    const startTime = performance.now();
+                    const response = await fetch(url);
+                    const endTime = performance.now();
+                    
+                    const duration = Math.round(endTime - startTime);
+                    const cacheStatus = response.headers.get('X-Cache-Status') || 'UNKNOWN';
+                    
+                    results.push({ run: i, duration, cacheStatus, status: response.status });
+                    log(`Run ${i}: ${duration}ms (Cache: ${cacheStatus})`);
+                    
+                    // Wait a bit between requests
+                    if (i < 3) await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+
+                const avgTime = Math.round(results.reduce((sum, r) => sum + r.duration, 0) / results.length);
+                const firstRun = results[0];
+                const lastRun = results[results.length - 1];
+
+                showResult('performanceResult', 
+                    `✅ Performance test completed!<br>
+                    <strong>Average response time:</strong> ${avgTime}ms<br>
+                    <strong>First request:</strong> ${firstRun.duration}ms (${firstRun.cacheStatus})<br>
+                    <strong>Last request:</strong> ${lastRun.duration}ms (${lastRun.cacheStatus})<br>
+                    <strong>Cache improvement:</strong> ${firstRun.duration > lastRun.duration ? '✅ Working' : '⚠️ Check cache config'}`, 
+                    'success'
+                );
+                log(`Performance test completed: avg ${avgTime}ms`);
+
+            } catch (error) {
+                showResult('performanceResult', `❌ Performance test failed: ${error.message}`, 'error');
+                log(`Performance test failed: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run Performance Test';
+            }
+        }
+    </script>
+</body>
+</html>

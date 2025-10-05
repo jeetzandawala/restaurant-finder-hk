@@ -1,46 +1,49 @@
-// checkers/chope.js
+// checkers/chope.js - Accurate version with date validation
 import { getPageText, getElementText, safeGoto, safeQuery } from './utils.js';
 
 export async function checkChope(page, restaurant, query) {
   const [year, month, day] = query.date.split('-');
   
+  // Build proper Chope URL with parameters
   let url;
   if (restaurant.url && restaurant.url.includes('book.chope.co/booking')) {
-    // Use existing Chope booking URL and add parameters
     const urlObj = new URL(restaurant.url);
     urlObj.searchParams.set('date', `${day}/${month}/${year}`);
     urlObj.searchParams.set('time', query.time.replace(':', ''));
     urlObj.searchParams.set('adults', query.partySize);
     url = urlObj.toString();
   } else if (restaurant.url) {
-    // For other Chope URLs, try to use as-is
     url = restaurant.url;
   } else {
-    // Construct from slug
-    url = `https://book.chope.co/booking?rid=${restaurant.slug}&source=rest_website&date=${day}%2F${month}%2F${year}&time=${query.time.replace(':', '')}&adults=${query.partySize}`;
+    url = `https://book.chope.co/booking?rid=${restaurant.slug}&date=${day}%2F${month}%2F${year}&time=${query.time.replace(':', '')}&adults=${query.partySize}`;
   }
+  
   try {
     const navigationSuccess = await safeGoto(page, url);
     if (!navigationSuccess) {
       return { name: restaurant.name, status: 'unavailable', url };
     }
     
-    // Wait for dynamic content to load
-    await page.waitForTimeout(3000);
+    // Handle modals
+    await handleModals(page);
+    
+    // Wait for content
+    await page.waitForTimeout(5000);
     
     // Get page content
     const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
-    // Check for various unavailability messages
+    // STRICT CHECK 1: Explicit "no availability" messages
     const unavailableMessages = [
       'there are no available timeslots',
       'no available timeslots',
       'fully booked',
-      'no availability',
-      'not available',
+      'no availability for',
+      'not available on',
       'no tables available',
-      'sold out'
+      'sold out',
+      'restaurant is fully booked'
     ];
     
     for (const message of unavailableMessages) {
@@ -49,91 +52,168 @@ export async function checkChope(page, restaurant, query) {
       }
     }
     
-    // Look for booking-related elements that indicate availability
-    const bookingElements = await safeQuery(page, 'button[type="submit"], .book-now, .reserve-now, .available-slot, input[type="submit"]');
-    if (bookingElements.length > 0) {
-      // Check if any of these elements contain booking-related text
-      for (const element of bookingElements) {
-        const elementText = await getElementText(element);
-        if (elementText && (
-          elementText.toLowerCase().includes('book') || 
-          elementText.toLowerCase().includes('reserve') ||
-          elementText.toLowerCase().includes('confirm')
-        )) {
-          return { name: restaurant.name, status: 'available', url };
+    // STRICT CHECK 2: Verify date on page
+    const dateFormats = formatDateForValidation(query.date);
+    let dateFoundOnPage = false;
+    
+    // Also check Chope's specific date format: "DD/MM/YYYY"
+    const chopeDate = `${day}/${month}/${year}`;
+    if (content.includes(chopeDate)) {
+      dateFoundOnPage = true;
+    }
+    
+    for (const format of Object.values(dateFormats)) {
+      if (content.includes(format)) {
+        dateFoundOnPage = true;
+        break;
+      }
+    }
+    
+    if (!dateFoundOnPage) {
+      console.log(`${restaurant.name}: Date ${chopeDate} not found on page`);
+    }
+    
+    // STRICT CHECK 3: Look for clickable time slot elements
+    const timeSlotSelectors = [
+      'button[data-time]',
+      'button[class*="timeslot"]',
+      '.available-timeslot',
+      '.time-button',
+      'button[onclick*="time"]',
+      'a[class*="timeslot"]'
+    ];
+    
+    let clickableSlots = 0;
+    for (const selector of timeSlotSelectors) {
+      try {
+        const elements = await page.$$(selector);
+        for (const el of elements) {
+          const isVisible = await el.isVisible();
+          const isEnabled = await el.isEnabled();
+          if (isVisible && isEnabled) {
+            clickableSlots++;
+          }
         }
+      } catch (e) {
+        // Continue
       }
     }
     
-    // Look for time slots in content
-    const timePatterns = [
-      /\b\d{1,2}:\d{2}\s*(am|pm)\b/gi,
-      /\b\d{1,2}:\d{2}\b/g,
-    ];
+    if (clickableSlots >= 2) {
+      console.log(`${restaurant.name}: Found ${clickableSlots} clickable time slots`);
+      return { name: restaurant.name, status: 'available', url };
+    }
     
-    let timeSlotCount = 0;
-    for (const pattern of timePatterns) {
-      const matches = content.match(pattern);
-      if (matches) {
-        timeSlotCount += matches.length;
+    // STRICT CHECK 4: Look for actual time buttons
+    const allButtons = await page.$$('button, a[role="button"]');
+    let validTimeButtons = 0;
+    
+    for (const button of allButtons) {
+      try {
+        const text = await button.textContent();
+        const isVisible = await button.isVisible();
+        const isEnabled = await button.isEnabled();
+        
+        if (text && isVisible && isEnabled) {
+          // Chope uses formats like "19:00", "7:00 PM"
+          if (text.match(/^\d{1,2}:\d{2}$/) || text.match(/\d{1,2}:\d{2}\s*(AM|PM)/i)) {
+            validTimeButtons++;
+          }
+        }
+      } catch (e) {
+        // Skip
       }
     }
     
-    if (timeSlotCount >= 3) {
+    if (validTimeButtons >= 2) {
+      console.log(`${restaurant.name}: Found ${validTimeButtons} time buttons`);
       return { name: restaurant.name, status: 'available', url };
     }
     
-    // Look for Chope-specific availability indicators
-    const chopeKeywords = [
-      'available timeslots',
-      'select time',
-      'choose time',
-      'book now',
-      'reserve now',
-      'make reservation'
-    ];
+    // STRICT CHECK 5: Check for Chope booking UI with times
+    const hasBookingUI = contentLower.includes('available timeslots') || 
+                         contentLower.includes('select time') ||
+                         contentLower.includes('choose your time');
     
-    for (const keyword of chopeKeywords) {
-      if (contentLower.includes(keyword)) {
-        return { name: restaurant.name, status: 'available', url };
-      }
-    }
-    
-    // Also check all clickable elements for time patterns
-    const allClickableElements = await safeQuery(page, 'button, a, option, .clickable, [role="button"]');
-    for (const element of allClickableElements) {
-      const elementText = await getElementText(element);
-      if (elementText && (elementText.match(/\d{1,2}:\d{2}/) || elementText.match(/\d{1,2}(am|pm)/i))) {
-        return { name: restaurant.name, status: 'available', url };
-      }
-    }
-    
-    // Check for restaurant selection or calendar elements (indicates working booking system)
-    const functionalElements = await safeQuery(page, 'select, .calendar, .date-picker, form');
-    if (functionalElements.length > 2) { // More than just basic page elements
+    if (hasBookingUI && validTimeButtons > 0) {
+      console.log(`${restaurant.name}: Has booking UI with time options`);
       return { name: restaurant.name, status: 'available', url };
     }
     
-    // Check for forms (booking forms indicate availability)
-    const forms = await safeQuery(page, 'form');
-    if (forms.length >= 1) {
-      return { name: restaurant.name, status: 'available', url };
-    }
-    
-    // Check page structure - if it has many interactive elements, likely available
-    const buttons = await safeQuery(page, 'button');
-    const links = await safeQuery(page, 'a');
-    
-    // Chope pages with booking capability have many interactive elements
-    if (buttons.length > 10 || links.length > 50) {
-      return { name: restaurant.name, status: 'available', url };
-    }
-    
-    // Default to unavailable if we can't find positive indicators of availability
+    // CONSERVATIVE DEFAULT
+    console.log(`${restaurant.name}: No strong availability indicators`);
     return { name: restaurant.name, status: 'unavailable', url };
     
   } catch (error) {
     console.error(`Chope error for ${restaurant.name}:`, error.message);
     return { name: restaurant.name, status: 'unavailable', url };
   }
+}
+
+// Helper: Handle modals and popups
+async function handleModals(page) {
+  try {
+    // Chope-specific modal handling
+    const closeSelectors = [
+      'button[aria-label="Close"]',
+      '.modal-close',
+      '.close',
+      'button:has-text("✕")',
+      'button:has-text("×")',
+      'button:has-text("Close")',
+      '[data-dismiss="modal"]'
+    ];
+    
+    for (const selector of closeSelectors) {
+      try {
+        const closeButton = await page.$(selector);
+        if (closeButton && await closeButton.isVisible()) {
+          await closeButton.click();
+          await page.waitForTimeout(1000);
+          console.log(`${restaurant.name}: Closed modal`);
+          break;
+        }
+      } catch (e) {
+        // Continue
+      }
+    }
+    
+    // Press Escape
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+    
+    // Click outside modal if there's an overlay
+    try {
+      const overlay = await page.$('.modal-backdrop, .overlay, [class*="backdrop"]');
+      if (overlay && await overlay.isVisible()) {
+        await overlay.click({ position: { x: 5, y: 5 } });
+        await page.waitForTimeout(500);
+      }
+    } catch (e) {
+      // Continue
+    }
+  } catch (error) {
+    // Modal handling failed, continue
+  }
+}
+
+// Helper: Format date for validation
+function formatDateForValidation(dateString) {
+  const date = new Date(dateString + 'T12:00:00');
+  
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const month = date.getMonth();
+  const day = date.getDate();
+  const year = date.getFullYear();
+  
+  return {
+    fullFormat: `${months[month]} ${day}, ${year}`,
+    shortFormat: `${monthsShort[month]} ${day}, ${year}`,
+    numericFormat: `${month + 1}/${day}/${year}`,
+    isoFormat: dateString
+  };
 }

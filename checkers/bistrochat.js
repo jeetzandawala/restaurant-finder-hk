@@ -1,29 +1,34 @@
-// checkers/bistrochat.js
+// checkers/bistrochat.js - Accurate version with date validation
 import { getPageText, safeGoto } from './utils.js';
 
 export async function checkBistrochat(page, restaurant, query) {
   const url = restaurant.url || `https://book.bistrochat.com/${restaurant.slug}`;
+  
   try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     
-    // Wait for dynamic content to load
-    await page.waitForTimeout(5000);
+    // Handle modals
+    await handleModals(page);
+    
+    // Wait for Bistrochat's dynamic content (it's quite heavy)
+    await page.waitForTimeout(7000);
     
     // Get page content
     const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
-    // Check for various unavailability messages
+    // STRICT CHECK 1: Explicit unavailability messages
     const unavailableMessages = [
       'no available slots',
-      'no availability',
-      'fully booked',
-      'not available',
+      'no availability for',
+      'fully booked on',
+      'not available on',
       'no tables available',
       'sold out',
       'no reservations available',
-      'restaurant is closed',
-      'booking not available'
+      'restaurant is closed on',
+      'booking not available for',
+      'we are closed'
     ];
     
     for (const message of unavailableMessages) {
@@ -32,53 +37,72 @@ export async function checkBistrochat(page, restaurant, query) {
       }
     }
     
-    // Look for time slots in the page content (Bistrochat shows many time options)
-    const timePatterns = [
-      /\b\d{1,2}:\d{2}\b/g, // "19:00", "12:30"
-      /\b\d{1,2}:\d{2}\s*(am|pm)\b/gi, // "7:00 pm"
-    ];
+    // STRICT CHECK 2: Verify date is on page
+    const dateFormats = formatDateForValidation(query.date);
+    let dateFoundOnPage = false;
     
-    let timeSlotCount = 0;
-    for (const pattern of timePatterns) {
-      const matches = content.match(pattern);
-      if (matches) {
-        timeSlotCount += matches.length;
+    for (const format of Object.values(dateFormats)) {
+      if (content.includes(format)) {
+        dateFoundOnPage = true;
+        break;
       }
     }
     
-    // Bistrochat typically shows many time slots when available
-    if (timeSlotCount >= 5) {
+    if (!dateFoundOnPage) {
+      console.log(`${restaurant.name}: Date not found - may be wrong date`);
+      // For Bistrochat, this is critical - if date not shown, likely wrong page
+      return { name: restaurant.name, status: 'unavailable', url };
+    }
+    
+    // STRICT CHECK 3: Look for clickable time buttons (Bistrochat shows many)
+    const timeButtons = await page.$$('button');
+    let validTimeButtons = 0;
+    
+    for (const button of timeButtons) {
+      try {
+        const text = await button.textContent();
+        const isVisible = await button.isVisible();
+        const isEnabled = await button.isEnabled();
+        
+        if (text && isVisible && isEnabled) {
+          // Bistrochat uses "HH:MM" format
+          if (text.match(/^\d{1,2}:\d{2}$/)) {
+            validTimeButtons++;
+          }
+        }
+      } catch (e) {
+        // Skip
+      }
+    }
+    
+    // Bistrochat typically shows 5+ time slots when available
+    if (validTimeButtons >= 5) {
+      console.log(`${restaurant.name}: Found ${validTimeButtons} time slots`);
       return { name: restaurant.name, status: 'available', url };
     }
     
-    // Look for Bistrochat-specific booking keywords
-    const bookingKeywords = [
-      'book now',
-      'reserve now',
-      'how many of you',
-      'when would you like',
-      'what time would',
-      'join us',
-      'book a table'
-    ];
+    // STRICT CHECK 4: Check for Bistrochat booking interface
+    const hasBookingInterface = contentLower.includes('how many of you') ||
+                                contentLower.includes('when would you like') ||
+                                contentLower.includes('select a time');
     
-    for (const keyword of bookingKeywords) {
-      if (contentLower.includes(keyword)) {
-        return { name: restaurant.name, status: 'available', url };
-      }
+    if (hasBookingInterface && validTimeButtons >= 3) {
+      console.log(`${restaurant.name}: Has booking interface with ${validTimeButtons} times`);
+      return { name: restaurant.name, status: 'available', url };
     }
     
-    // Look for time elements in DOM (Bistrochat has many time buttons)
-    const allElements = await page.$$('button, div, span');
-    let foundTimeElements = 0;
-    
-    for (const element of allElements.slice(0, 100)) {
+    // STRICT CHECK 5: Check for "book" buttons that are enabled
+    let bookableButtons = 0;
+    for (const button of timeButtons) {
       try {
-        const text = await element.textContent();
-        if (text && text.match(/^\d{1,2}:\d{2}$/)) { // Exact time format like "19:00"
-          foundTimeElements++;
-          if (foundTimeElements >= 5) {
-            return { name: restaurant.name, status: 'available', url };
+        const text = await button.textContent();
+        const isVisible = await button.isVisible();
+        const isEnabled = await button.isEnabled();
+        
+        if (text && isVisible && isEnabled) {
+          const lowerText = text.toLowerCase();
+          if (lowerText.includes('book') || lowerText.includes('reserve')) {
+            bookableButtons++;
           }
         }
       } catch (e) {
@@ -86,29 +110,73 @@ export async function checkBistrochat(page, restaurant, query) {
       }
     }
     
-    // Look for booking buttons
-    const allButtons = await page.$$('button, input[type="submit"]');
-    for (const button of allButtons.slice(0, 30)) {
-      try {
-        const buttonText = await button.textContent();
-        if (buttonText) {
-          const lowerText = buttonText.toLowerCase();
-          if (lowerText.includes('book') || 
-              lowerText.includes('reserve') ||
-              lowerText.includes('table')) {
-            return { name: restaurant.name, status: 'available', url };
-          }
-        }
-      } catch (e) {
-        // Skip
-      }
+    if (bookableButtons > 0 && validTimeButtons > 0) {
+      console.log(`${restaurant.name}: Has ${bookableButtons} book buttons with times`);
+      return { name: restaurant.name, status: 'available', url };
     }
     
-    // Bistrochat seems to work reliably, so assume available if no explicit unavailability
-    return { name: restaurant.name, status: 'available', url };
+    // CONSERVATIVE DEFAULT - No longer defaulting to "available"!
+    console.log(`${restaurant.name}: No strong availability indicators (found ${validTimeButtons} time buttons)`);
+    return { name: restaurant.name, status: 'unavailable', url };
     
   } catch (error) {
     console.error(`Bistrochat error for ${restaurant.name}:`, error.message);
     return { name: restaurant.name, status: 'unavailable', url };
   }
+}
+
+// Helper: Handle modals and popups
+async function handleModals(page) {
+  try {
+    const closeSelectors = [
+      'button[aria-label="Close"]',
+      'button[aria-label="close"]',
+      '.modal-close',
+      '.close-button',
+      'button:has-text("✕")',
+      'button:has-text("×")',
+      'button:has-text("Close")',
+      '[data-dismiss]'
+    ];
+    
+    for (const selector of closeSelectors) {
+      try {
+        const closeButton = await page.$(selector);
+        if (closeButton && await closeButton.isVisible()) {
+          await closeButton.click();
+          await page.waitForTimeout(1000);
+          break;
+        }
+      } catch (e) {
+        // Continue
+      }
+    }
+    
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  } catch (error) {
+    // Continue
+  }
+}
+
+// Helper: Format date for validation
+function formatDateForValidation(dateString) {
+  const date = new Date(dateString + 'T12:00:00');
+  
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const month = date.getMonth();
+  const day = date.getDate();
+  const year = date.getFullYear();
+  
+  return {
+    fullFormat: `${months[month]} ${day}, ${year}`,
+    shortFormat: `${monthsShort[month]} ${day}, ${year}`,
+    numericFormat: `${month + 1}/${day}/${year}`,
+    dayMonthFormat: `${day} ${monthsShort[month]}`,
+    isoFormat: dateString
+  };
 }
