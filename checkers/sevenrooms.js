@@ -28,8 +28,8 @@ export async function checkSevenRooms(page, restaurant, query) {
     const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
-    // ULTRA-STRICT CHECK 1: Look for explicit "no availability" messages
-    const noAvailabilityIndicators = [
+    // SMART CHECK 1: Look for strong unavailability signals
+    const strongUnavailabilityIndicators = [
       'unfortunately, there is no availability',
       'there is no availability that meets your search criteria',
       'no availability that meets your search criteria',
@@ -41,20 +41,18 @@ export async function checkSevenRooms(page, restaurant, query) {
       'no tables available on',
       'sold out for',
       'we are closed on',
-      'closed on',
-      'restaurant is closed',
-      'other dates with availability', // KEY: This means requested date unavailable!
-      'book one of these upcoming dates', // Another indicator
-      'try another date',
-      'no availability for this date'
+      'restaurant is closed'
     ];
     
-    for (const indicator of noAvailabilityIndicators) {
+    for (const indicator of strongUnavailabilityIndicators) {
       if (contentLower.includes(indicator)) {
-        console.log(`${restaurant.name}: Found unavailability indicator: "${indicator}"`);
+        console.log(`${restaurant.name}: Found strong unavailability: "${indicator}"`);
         return { name: restaurant.name, status: 'unavailable', url };
       }
     }
+    
+    // SMART CHECK 1b: "Other dates" only matters if we can't find ANY time slots
+    // (We'll check this later after looking for time slots)
     
     // STRICT CHECK 2: Verify the requested date is shown on the page
     const requestedDate = formatDateForValidation(query.date);
@@ -145,6 +143,15 @@ export async function checkSevenRooms(page, restaurant, query) {
     if (hasSelectTime && (timeButtonsFound > 0 || foundClickableTimeSlots > 0)) {
       console.log(`${restaurant.name}: Has booking UI with some time options`);
       return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // SMART CHECK 6: Check "other dates" ONLY if no time slots found
+    const hasOtherDatesMessage = contentLower.includes('other dates with availability') || 
+                                  contentLower.includes('book one of these upcoming dates');
+    
+    if (hasOtherDatesMessage) {
+      console.log(`${restaurant.name}: Shows "other dates" but no time slots for requested date`);
+      return { name: restaurant.name, status: 'unavailable', url };
     }
     
     // CONSERVATIVE DEFAULT: If we can't find strong evidence of availability, mark unavailable

@@ -20,18 +20,16 @@ export async function checkTableCheck(page, restaurant, query) {
     const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
-    // STRICT CHECK 1: Explicit unavailability messages
+    // STRICT CHECK 1: Strong unavailability messages only
     const unavailableMessages = [
       'no available slots',
-      'no availability for',
+      'unfortunately, there is no availability',
       'fully booked on',
       'not available on',
       'no tables available on',
       'sold out',
       'no reservations available on',
       'no slots available for',
-      'other dates with availability', // Requested date unavailable
-      'unfortunately, there is no availability',
       'we are closed on',
       'closed on'
     ];
@@ -123,6 +121,12 @@ export async function checkTableCheck(page, restaurant, query) {
     if (hasBookingUI && validTimeButtons > 0) {
       console.log(`${restaurant.name}: Has booking UI with times`);
       return { name: restaurant.name, status: 'available', url };
+    }
+    
+    // SMART CHECK: "other dates" only if no time slots
+    if (contentLower.includes('other dates with availability') && validTimeButtons === 0) {
+      console.log(`${restaurant.name}: Shows other dates but no slots for requested date`);
+      return { name: restaurant.name, status: 'unavailable', url };
     }
     
     // CONSERVATIVE DEFAULT
