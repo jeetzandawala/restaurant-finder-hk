@@ -220,13 +220,17 @@ function handleStreamUpdate(update) {
             const totalTime = ((Date.now() - searchStartTime) / 1000).toFixed(1);
             console.log(`Search completed in ${totalTime}s`);
             
-            // Show unavailable section if needed
+            // Show unavailable section and render unavailable restaurants
             if (streamingResults.unavailable.length > 0) {
                 elements.unavailableSection.classList.remove('hidden');
+                // Render unavailable restaurants to the list
+                streamingResults.unavailable.forEach(restaurant => {
+                    addRestaurantToList(restaurant, elements.unavailableList, false);
+                });
             }
             
             // Show no results message if nothing found
-            if (streamingResults.available.length === 0) {
+            if (streamingResults.available.length === 0 && streamingResults.unavailable.length === 0) {
                 elements.noResults.classList.remove('hidden');
             }
             break;
@@ -260,32 +264,76 @@ function updateLoadingText(text) {
     }
 }
 
-// Add Restaurant to List (Streaming)
+// Add Restaurant to List (Streaming) - Beautiful Cards with Tailwind
 function addRestaurantToList(restaurant, container, isAvailable) {
     const card = document.createElement('div');
-    card.className = 'restaurant-card animate-slide-up';
+    card.className = `
+        bg-white dark:bg-gray-800 
+        rounded-xl shadow-lg 
+        border border-gray-200 dark:border-gray-700
+        p-6 
+        transition-all duration-300 
+        hover:shadow-xl hover:scale-105
+        animate-slide-up
+    `;
     card.style.opacity = '0';
     
-    const statusClass = isAvailable ? 'status-available' : 'status-unavailable';
-    const statusText = isAvailable ? 'Available' : 'Unavailable';
+    const statusColor = isAvailable 
+        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
     const statusIcon = isAvailable ? '✓' : '✗';
+    const statusText = isAvailable ? 'Available' : 'Unavailable';
     
     card.innerHTML = `
-        <div class="restaurant-header">
-            <h3 class="restaurant-name">${escapeHtml(restaurant.name)}</h3>
-            <span class="restaurant-status ${statusClass}">
-                <span class="status-icon">${statusIcon}</span>
-                ${statusText}
-            </span>
+        <div class="flex flex-col h-full">
+            <!-- Restaurant Header -->
+            <div class="flex items-start justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white pr-4 flex-1">
+                    ${escapeHtml(restaurant.name)}
+                </h3>
+                <span class="
+                    ${statusColor}
+                    px-3 py-1 
+                    rounded-full 
+                    text-xs font-semibold 
+                    flex items-center gap-1
+                    whitespace-nowrap
+                ">
+                    <span class="text-sm">${statusIcon}</span>
+                    ${statusText}
+                </span>
+            </div>
+            
+            <!-- Book Button for Available -->
+            ${isAvailable ? `
+                <a href="${escapeHtml(restaurant.url)}" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="
+                       mt-auto
+                       bg-primary-600 hover:bg-primary-700 
+                       dark:bg-primary-500 dark:hover:bg-primary-600
+                       text-white 
+                       font-semibold 
+                       py-3 px-6 
+                       rounded-lg 
+                       text-center
+                       transition-all duration-200
+                       hover:shadow-lg
+                       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+                       inline-flex items-center justify-center gap-2
+                   ">
+                    <span>Book Now</span>
+                    <span class="text-lg">→</span>
+                </a>
+            ` : `
+                <div class="mt-auto pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
+                        No availability for selected time
+                    </p>
+                </div>
+            `}
         </div>
-        ${isAvailable ? `
-            <a href="${escapeHtml(restaurant.url)}" 
-               target="_blank" 
-               rel="noopener noreferrer" 
-               class="book-button">
-                Book Now →
-            </a>
-        ` : ''}
     `;
     
     container.appendChild(card);
@@ -293,7 +341,8 @@ function addRestaurantToList(restaurant, container, isAvailable) {
     // Animate in
     setTimeout(() => {
         card.style.opacity = '1';
-    }, 10);
+        card.style.transform = 'translateY(0)';
+    }, 50);
 }
 
 // Update Statistics

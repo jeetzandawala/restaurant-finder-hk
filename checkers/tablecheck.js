@@ -29,7 +29,11 @@ export async function checkTableCheck(page, restaurant, query) {
       'no tables available on',
       'sold out',
       'no reservations available on',
-      'no slots available for'
+      'no slots available for',
+      'other dates with availability', // Requested date unavailable
+      'unfortunately, there is no availability',
+      'we are closed on',
+      'closed on'
     ];
     
     for (const message of unavailableMessages) {

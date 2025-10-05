@@ -28,20 +28,30 @@ export async function checkSevenRooms(page, restaurant, query) {
     const content = await getPageText(page);
     const contentLower = content.toLowerCase();
     
-    // STRICT CHECK 1: Look for explicit "no availability" messages
+    // ULTRA-STRICT CHECK 1: Look for explicit "no availability" messages
     const noAvailabilityIndicators = [
+      'unfortunately, there is no availability',
       'there is no availability that meets your search criteria',
       'no availability that meets your search criteria',
+      'no availability at the selected',
       'no times available for',
       'no times available on',
       'fully booked on',
       'not available for this date',
       'no tables available on',
-      'sold out for'
+      'sold out for',
+      'we are closed on',
+      'closed on',
+      'restaurant is closed',
+      'other dates with availability', // KEY: This means requested date unavailable!
+      'book one of these upcoming dates', // Another indicator
+      'try another date',
+      'no availability for this date'
     ];
     
     for (const indicator of noAvailabilityIndicators) {
       if (contentLower.includes(indicator)) {
+        console.log(`${restaurant.name}: Found unavailability indicator: "${indicator}"`);
         return { name: restaurant.name, status: 'unavailable', url };
       }
     }

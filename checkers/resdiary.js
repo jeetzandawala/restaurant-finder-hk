@@ -27,7 +27,10 @@ export async function checkResDiary(page, restaurant, query) {
       'sold out',
       'no reservations available',
       'restaurant is closed',
-      'booking not available'
+      'booking not available',
+      'other dates with availability', // Requested date unavailable
+      'unfortunately, there is no availability',
+      'we are closed on'
     ];
     
     for (const message of unavailableMessages) {

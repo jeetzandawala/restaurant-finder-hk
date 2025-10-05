@@ -28,7 +28,9 @@ export async function checkBistrochat(page, restaurant, query) {
       'no reservations available',
       'restaurant is closed on',
       'booking not available for',
-      'we are closed'
+      'we are closed',
+      'other dates with availability', // Requested date unavailable
+      'unfortunately, there is no availability'
     ];
     
     for (const message of unavailableMessages) {

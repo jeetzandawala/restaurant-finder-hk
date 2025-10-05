@@ -43,7 +43,10 @@ export async function checkChope(page, restaurant, query) {
       'not available on',
       'no tables available',
       'sold out',
-      'restaurant is fully booked'
+      'restaurant is fully booked',
+      'other dates with availability', // Requested date unavailable
+      'unfortunately, there is no availability',
+      'we are closed on'
     ];
     
     for (const message of unavailableMessages) {
